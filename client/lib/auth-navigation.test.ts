@@ -7,9 +7,9 @@ describe("auth navigation", () => {
   });
 
   it("rejects missing and protocol-relative destinations", () => {
-    expect(safeReturnTo()).toBe("/");
-    expect(safeReturnTo("//example.com/steal-session")).toBe("/");
-    expect(safeReturnTo("https://example.com")).toBe("/");
+    expect(safeReturnTo()).toBe("/dashboard");
+    expect(safeReturnTo("//example.com/steal-session")).toBe("/dashboard");
+    expect(safeReturnTo("https://example.com")).toBe("/dashboard");
   });
 
   it("only accepts signup as an alternate mode", () => {

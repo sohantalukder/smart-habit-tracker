@@ -217,7 +217,7 @@ export function OnboardingFlow({ initialName }: { initialName: string }) {
     setLoading(false);
     if (state === "enabled") {
       toast.success("Notifications are ready.");
-      window.setTimeout(() => window.location.assign("/"), 500);
+      window.setTimeout(() => window.location.assign("/dashboard"), 500);
     }
   }
 
@@ -242,7 +242,7 @@ export function OnboardingFlow({ initialName }: { initialName: string }) {
             <div className="onboarding-error">Firebase is not configured yet. Your account setup is complete.</div>
           )}
           <div className="onboarding-actions">
-            <Button variant="ghost" onClick={() => window.location.assign("/")}>Not now</Button>
+            <Button variant="ghost" onClick={() => window.location.assign("/dashboard")}>Not now</Button>
             <Button disabled={loading} onClick={() => void enablePush()}>
               {loading ? <LoaderCircle className="spin" /> : <Bell />}
               Enable notifications

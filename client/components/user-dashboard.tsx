@@ -193,7 +193,7 @@ export function UserDashboard() {
   return (
     <main className="honest-dashboard">
       <header className="honest-topbar">
-        <a href="/" className="bloom-brand">
+        <a href="/dashboard" className="bloom-brand">
           <span><Sprout size={21} /></span><strong>Bloom</strong>
         </a>
         <div className="honest-account">

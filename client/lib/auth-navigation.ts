@@ -1,7 +1,7 @@
 export type AuthMode = "signin" | "signup";
 
 export function safeReturnTo(value?: string) {
-  return value?.startsWith("/") && !value.startsWith("//") ? value : "/";
+  return value?.startsWith("/") && !value.startsWith("//") ? value : "/dashboard";
 }
 
 export function authMode(value?: string): AuthMode {

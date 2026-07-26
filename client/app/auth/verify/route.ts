@@ -22,7 +22,7 @@ export async function GET(request: Request) {
   if (!upstream.ok) return failureRedirect(request.url);
 
   const session = await upstream.json() as SessionResponse;
-  const response = NextResponse.redirect(new URL("/", request.url));
+  const response = NextResponse.redirect(new URL("/dashboard", request.url));
   response.cookies.set(
     SESSION_COOKIE,
     session.accessToken,

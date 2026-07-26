@@ -86,8 +86,8 @@ export function LandingPage() {
           <a href="#privacy">Privacy</a>
         </nav>
         <div className="landing-actions">
-          <Link href="/login">Sign in</Link>
-          <Link href="/login?mode=signup&returnTo=%2F" className="landing-button landing-button--small">
+          <Link href="/login?returnTo=%2Fdashboard">Sign in</Link>
+          <Link href="/login?mode=signup&returnTo=%2Fdashboard" className="landing-button landing-button--small">
             Start building
           </Link>
         </div>
@@ -102,7 +102,7 @@ export function LandingPage() {
             to begin today, flexible enough to survive real life.
           </p>
           <div className="landing-hero__actions">
-            <Link href="/login?mode=signup&returnTo=%2F" className="landing-button">
+            <Link href="/login?mode=signup&returnTo=%2Fdashboard" className="landing-button">
               Start building <ChevronRight size={19} />
             </Link>
             <a href="#features" className="landing-text-link">Explore the complete practice</a>
@@ -196,7 +196,7 @@ export function LandingPage() {
         <Sprout size={30} />
         <p>FOR PEOPLE WHO TREAT DISCIPLINE AS SELF-RESPECT</p>
         <h2>Begin with one promise<br />you intend to keep.</h2>
-        <Link href="/login?mode=signup&returnTo=%2F" className="landing-button landing-button--light">
+        <Link href="/login?mode=signup&returnTo=%2Fdashboard" className="landing-button landing-button--light">
           Create your private space <CircleUserRound size={19} />
         </Link>
       </section>
@@ -204,9 +204,8 @@ export function LandingPage() {
       <footer className="landing-footer">
         <Link href="/" className="bloom-brand"><span><Sprout size={20} /></span><strong>Bloom</strong></Link>
         <p>Private habits. Honest records. A stronger daily life.</p>
-        <Link href="/login">Sign in</Link>
+        <Link href="/login?returnTo=%2Fdashboard">Sign in</Link>
       </footer>
     </main>
   );
 }
-
