@@ -22,13 +22,33 @@ export class QueueService implements OnModuleDestroy {
   }
 
   async stats() {
-    if (!this.queue) return { connected: false, waiting: 0, active: 0, failed: 0 };
-    const [waiting, active, failed] = await Promise.all([
-      this.queue.getWaitingCount(),
-      this.queue.getActiveCount(),
-      this.queue.getFailedCount(),
-    ]);
-    return { connected: true, waiting, active, failed };
+    try {
+      const queue = this.instance();
+      await queue.waitUntilReady();
+      const [waiting, active, failed, workers] = await Promise.all([
+        queue.getWaitingCount(),
+        queue.getActiveCount(),
+        queue.getFailedCount(),
+        queue.getWorkers(),
+      ]);
+      return {
+        connected: true,
+        workerConnected: workers.length > 0,
+        workers: workers.length,
+        waiting,
+        active,
+        failed,
+      };
+    } catch {
+      return {
+        connected: false,
+        workerConnected: false,
+        workers: 0,
+        waiting: 0,
+        active: 0,
+        failed: 0,
+      };
+    }
   }
 
   async ping() {

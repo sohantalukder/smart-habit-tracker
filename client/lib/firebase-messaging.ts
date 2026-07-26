@@ -33,6 +33,8 @@ const registrationOptions = {
 
 let messagingPromise: Promise<Messaging | null> | null = null;
 let listenersAttached = false;
+let registrationUpload: Promise<void> | null = null;
+let registrationChain = Promise.resolve();
 
 export type PushRegistrationState =
   | "enabled"
@@ -65,12 +67,7 @@ export async function enablePushNotifications(
     "/firebase-messaging-sw.js",
     { scope: "/" },
   );
-  const uploaded = waitForRegistrationUpload(messaging);
-  await register(messaging, {
-    ...registrationOptions,
-    serviceWorkerRegistration: registration,
-  });
-  await uploaded;
+  await registerAndUpload(messaging, registration);
   return "enabled" as const;
 }
 
@@ -88,10 +85,7 @@ export async function syncPushRegistration(
     "/firebase-messaging-sw.js",
     { scope: "/" },
   );
-  await register(messaging, {
-    ...registrationOptions,
-    serviceWorkerRegistration: registration,
-  });
+  await registerAndUpload(messaging, registration);
   return "enabled" as const;
 }
 
@@ -123,7 +117,8 @@ function attachRegistrationListeners(messaging: Messaging) {
   if (listenersAttached) return;
   listenersAttached = true;
   onRegistered(messaging, (installationId) => {
-    void uploadInstallation(installationId).catch(() => null);
+    registrationUpload = uploadInstallation(installationId);
+    void registrationUpload.catch(() => null);
   });
   onUnregistered(messaging, (installationId) => {
     localStorage.removeItem(INSTALLATION_STORAGE_KEY);
@@ -134,18 +129,23 @@ function attachRegistrationListeners(messaging: Messaging) {
   });
 }
 
-function waitForRegistrationUpload(messaging: Messaging) {
-  return new Promise<void>((resolve) => {
-    const timeout = window.setTimeout(() => {
-      unsubscribe();
-      resolve();
-    }, 5000);
-    const unsubscribe = onRegistered(messaging, (installationId) => {
-      window.clearTimeout(timeout);
-      unsubscribe();
-      void uploadInstallation(installationId).finally(resolve);
+function registerAndUpload(
+  messaging: Messaging,
+  serviceWorkerRegistration: ServiceWorkerRegistration,
+) {
+  registrationChain = registrationChain.catch(() => undefined).then(async () => {
+    registrationUpload = null;
+    await register(messaging, {
+      ...registrationOptions,
+      serviceWorkerRegistration,
     });
+    const uploaded = registrationUpload;
+    if (!uploaded) {
+      throw new Error("Firebase registration completed without an installation ID.");
+    }
+    await uploaded;
   });
+  return registrationChain;
 }
 
 async function uploadInstallation(installationId: string) {

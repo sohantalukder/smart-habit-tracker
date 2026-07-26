@@ -338,7 +338,10 @@ function NotificationsPanel({ rows, canManage }: { rows: AdminDelivery[]; canMan
 }
 
 function HealthPanel({ health }: { health: AdminHealth | null }) {
-  return <><Card className="health-hero"><span><ShieldCheck size={27}/></span><div><p>SUPPORT VERIFIED</p><h2>{health?.api === "healthy" ? "Bloom is healthy" : "Health needs attention"}</h2><small>Cached for five minutes and refreshed when stale</small></div></Card><div className="service-grid">{[["NestJS REST API",health?.api ?? "Unknown"],["PostgreSQL",health?.postgres ?? "Unknown"],["Redis queue",health?.queue?.connected ? "Connected" : "Not connected"],["Failed jobs",String(health?.queue?.failed ?? 0)]].map(([name,status])=><Card key={name}><span><HeartPulse size={18}/></span><p>{name}</p><h2>{status}</h2></Card>)}</div></>;
+  const healthy = health?.api === "healthy"
+    && health?.queue?.connected
+    && health?.queue?.workerConnected;
+  return <><Card className="health-hero"><span><ShieldCheck size={27}/></span><div><p>SUPPORT VERIFIED</p><h2>{healthy ? "Bloom is healthy" : "Health needs attention"}</h2><small>Cached for five minutes and refreshed when stale</small></div></Card><div className="service-grid">{[["NestJS REST API",health?.api ?? "Unknown"],["PostgreSQL",health?.postgres ?? "Unknown"],["Redis queue",health?.queue?.connected ? "Connected" : "Not connected"],["Notification worker",health?.queue?.workerConnected ? "Online" : "Offline"],["Waiting jobs",String(health?.queue?.waiting ?? 0)],["Failed jobs",String(health?.queue?.failed ?? 0)]].map(([name,status])=><Card key={name}><span><HeartPulse size={18}/></span><p>{name}</p><h2>{status}</h2></Card>)}</div></>;
 }
 
 function AuditPanel({ rows }: { rows: AdminAudit[] }) {

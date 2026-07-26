@@ -219,6 +219,10 @@ export type AdminHealth = {
   postgres?: string;
   queue?: {
     connected?: boolean;
+    workerConnected?: boolean;
+    workers?: number;
+    waiting?: number;
+    active?: number;
     failed?: number;
   };
 };

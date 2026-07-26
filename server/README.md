@@ -14,7 +14,11 @@ attempt for every active browser installation.
 1. Copy `.env.example` to `.env`.
 2. Start PostgreSQL and Redis.
 3. Run `pnpm install` and `pnpm db:migrate`.
-4. Run `pnpm dev:api` and `pnpm dev:worker` in separate terminals.
+4. Run `pnpm dev` to start both the API and notification worker.
+
+You can still run `pnpm dev:api` and `pnpm dev:worker` in separate terminals
+when you need to debug either process independently. Push and email delivery
+jobs remain queued until `dev:worker` is running.
 
 The API is served under `/v1`. Its versioned contract is available at
 `/v1/openapi.json`. In non-production environments without a Resend key,
