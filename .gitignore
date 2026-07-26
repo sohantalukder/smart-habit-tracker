@@ -1,11 +1,14 @@
-node_modules
-dist
-coverage
-.turbo
-*.tsbuildinfo
+.DS_Store
+.pnpm-store/
+
+# Local environment files
 .env
 .env.local
 .env.*.local
-!.env.example
-.supabase
-supabase/.temp
+
+# Dependencies and build output
+node_modules/
+.next/
+dist/
+coverage/
+*.tsbuildinfo
