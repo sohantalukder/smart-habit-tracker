@@ -3,6 +3,7 @@ import {
   adminRestrictionSchema,
   adminPasswordChangeSchema,
   adminPrayerSettingsSchema,
+  adminRoleUpdateSchema,
   checkInSchema,
   createHabitSchema,
   loginSchema,
@@ -97,5 +98,12 @@ describe("REST contracts", () => {
       madhab: null,
       calculationMethod: null,
     }).success).toBe(true);
+  });
+
+  it("accepts standard, support, and super-admin role assignments only", () => {
+    expect(adminRoleUpdateSchema.safeParse({ role: null }).success).toBe(true);
+    expect(adminRoleUpdateSchema.safeParse({ role: "support" }).success).toBe(true);
+    expect(adminRoleUpdateSchema.safeParse({ role: "super_admin" }).success).toBe(true);
+    expect(adminRoleUpdateSchema.safeParse({ role: "moderator" }).success).toBe(false);
   });
 });

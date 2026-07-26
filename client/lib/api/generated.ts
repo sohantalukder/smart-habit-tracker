@@ -468,6 +468,22 @@ export interface paths {
         patch: operations["adminUpdateUserProfile"];
         trace?: never;
     };
+    "/admin/users/{userId}/role": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["adminUpdateUserRole"];
+        trace?: never;
+    };
     "/admin/users/{userId}/prayer-settings": {
         parameters: {
             query?: never;
@@ -957,6 +973,10 @@ export interface components {
             newPassword: string;
             confirmation: string;
             adminPassword: string;
+        };
+        AdminRoleUpdateInput: {
+            /** @enum {string|null} */
+            role: "support" | "super_admin" | null;
         };
         AdminPrayerSettingsInput: {
             enabled: boolean;
@@ -2195,6 +2215,35 @@ export interface operations {
             };
             400: components["responses"]["Error"];
             403: components["responses"]["Error"];
+        };
+    };
+    adminUpdateUserRole: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                userId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AdminRoleUpdateInput"];
+            };
+        };
+        responses: {
+            /** @description Updated administrator role. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+            409: components["responses"]["Error"];
         };
     };
     adminUpdateUserPrayerSettings: {

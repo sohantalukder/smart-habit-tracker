@@ -128,4 +128,39 @@ describe("AdminController security mutations", () => {
       reason: "Security review",
     })).rejects.toMatchObject({ status: 409 });
   });
+
+  it("assigns an administrator role through the dedicated audited endpoint", async () => {
+    const database = {
+      query: vi.fn(async (sql: string) => {
+        if (sql.includes("select p.id, u.email") && sql.includes("admin_memberships")) {
+          return { rows: [adminProfile()] };
+        }
+        if (sql.includes("from idempotency_records")) return { rows: [] };
+        if (sql.includes("select m.role") && sql.includes("from profiles p")) {
+          return { rows: [{ role: null }] };
+        }
+        return { rows: [], rowCount: 1 };
+      }),
+    } as unknown as DatabaseService;
+    const auditRecord = vi.fn();
+    const controller = new AdminController(
+      database,
+      { record: auditRecord } as unknown as AuditService,
+      {} as unknown as QueueService,
+      {} as VerificationEmailService,
+    );
+
+    await expect(controller.updateUserRole(request(), targetId, {
+      role: "support",
+    })).resolves.toEqual({ id: targetId, role: "support" });
+
+    expect(database.query).toHaveBeenCalledWith(
+      expect.stringContaining("insert into admin_memberships"),
+      [targetId, "support", actorId],
+    );
+    expect(auditRecord).toHaveBeenCalledWith(expect.objectContaining({
+      action: "user.role_updated",
+      metadata: { previousRole: null, nextRole: "support" },
+    }));
+  });
 });
