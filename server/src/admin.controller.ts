@@ -191,7 +191,7 @@ export class AdminController {
                 l.created_at, l.updated_at
          from habit_daily_logs l
          join habits h on h.id = l.habit_id
-         where l.user_id = $1
+         where l.user_id = $1 and l.deleted_at is null
          order by l.local_date desc, l.created_at desc
          limit 100`,
         [id],
@@ -207,7 +207,7 @@ export class AdminController {
       this.database.query(
         `select id, local_date, prayer_name, status, created_at, updated_at
          from prayer_logs
-         where user_id = $1
+         where user_id = $1 and deleted_at is null
          order by local_date desc, prayer_name
          limit 200`,
         [id],
@@ -697,6 +697,7 @@ export class AdminController {
            on conflict (habit_id, local_date) do update
            set status = excluded.status, value = excluded.value,
                note = excluded.note, prayer_status = excluded.prayer_status,
+               deleted_at = null,
                updated_at = now()
            returning id, habit_id, local_date, status, value::float8 as value,
                      note, prayer_status, created_at, updated_at`,
@@ -738,7 +739,8 @@ export class AdminController {
       `DELETE:/admin/users/${userId}/habits/${habitId}/check-ins/${localDate}`,
       async () => {
         const result = await this.database.query(
-          `delete from habit_daily_logs
+          `update habit_daily_logs
+           set deleted_at = now(), updated_at = now()
            where user_id = $1 and habit_id = $2 and local_date = $3::date
            returning id`,
           [userId, habitId, localDate],
@@ -859,7 +861,7 @@ export class AdminController {
            )
            values ($1, $2::date, $3, $4, $5)
            on conflict (user_id, local_date, prayer_name) do update
-           set status = excluded.status, updated_at = now()
+           set status = excluded.status, deleted_at = null, updated_at = now()
            returning id, local_date, prayer_name, status, created_at, updated_at`,
           [
             userId,
@@ -897,7 +899,8 @@ export class AdminController {
       `DELETE:/admin/users/${userId}/prayers/${prayer}/logs/${localDate}`,
       async () => {
         const result = await this.database.query(
-          `delete from prayer_logs
+          `update prayer_logs
+           set deleted_at = now(), updated_at = now()
            where user_id = $1 and prayer_name = $2 and local_date = $3::date
            returning id`,
           [userId, prayer, localDate],

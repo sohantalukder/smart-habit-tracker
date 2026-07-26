@@ -31,6 +31,7 @@ const requiredPaths = [
   "/auth/request-email-change",
   "/auth/verify-email-change",
   "/auth/sign-out-others",
+  "/auth/sessions",
   "/auth/delete-account",
   "/profile",
   "/profile/avatar",
@@ -43,6 +44,8 @@ const requiredPaths = [
   "/journal/{localDate}",
   "/tracking",
   "/push/installations",
+  "/sync/push",
+  "/sync/pull",
 ];
 if (requiredPaths.some((path) => !document.paths?.[path])) {
   throw new Error("OpenAPI document is missing required public interfaces.");

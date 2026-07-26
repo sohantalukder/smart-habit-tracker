@@ -13,7 +13,11 @@ export const emailSchema = z.object({
   email: z.email().max(254),
 });
 export const verificationSchema = z.object({
-  token: z.string().min(32).max(200),
+  email: z.email().max(254),
+  code: z.string().regex(/^\d{6}$/, "Enter the six-digit verification code."),
+});
+export const emailChangeVerificationSchema = z.object({
+  code: z.string().regex(/^\d{6}$/, "Enter the six-digit verification code."),
 });
 export const profileUpdateSchema = z.object({
   name: z.string().trim().min(2).max(80),
@@ -54,7 +58,9 @@ export const frequencySchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("weekly_target"), target: z.number().int().min(1).max(7) }),
   z.object({ kind: z.literal("weekdays"), days: z.array(z.number().int().min(0).max(6)).min(1) }),
 ]);
+const clientEntityIdSchema = z.uuid().optional();
 export const customHabitSchema = z.object({
+  id: clientEntityIdSchema,
   name: z.string().min(1).max(80),
   icon: z.string().min(1).max(8),
   category: habitCategorySchema,
@@ -65,6 +71,7 @@ export const customHabitSchema = z.object({
   forgiving: z.boolean().default(false),
 });
 export const templateHabitSchema = z.object({
+  id: clientEntityIdSchema,
   templateId: z.uuid(),
 });
 export const createHabitSchema = z.union([
@@ -176,7 +183,47 @@ export const habitReminderSchema = z.discriminatedUnion("enabled", [
 ]);
 export const firebaseInstallationSchema = z.object({
   installationId: z.string().trim().min(10).max(255),
-  platform: z.literal("web").default("web"),
+  platform: z.enum(["web", "ios", "android"]).default("web"),
+  pushToken: z.string().trim().min(10).max(4096).optional(),
+}).superRefine((value, context) => {
+  if (value.platform !== "web" && !value.pushToken) {
+    context.addIssue({
+      code: "custom",
+      path: ["pushToken"],
+      message: "A native Firebase push token is required.",
+    });
+  }
+  if (value.platform === "web" && value.pushToken) {
+    context.addIssue({
+      code: "custom",
+      path: ["pushToken"],
+      message: "Web installations use a Firebase installation ID.",
+    });
+  }
+});
+export const syncEntityTypeSchema = z.enum([
+  "profile",
+  "preferences",
+  "habit",
+  "habit_log",
+  "journal",
+  "prayer_log",
+  "habit_reminder",
+  "prayer_reminder",
+  "onboarding",
+  "push_installation",
+]);
+export const syncMutationSchema = z.object({
+  mutationId: z.uuid(),
+  entityType: syncEntityTypeSchema,
+  entityId: z.string().trim().min(1).max(255),
+  operation: z.enum(["upsert", "delete"]),
+  clientModifiedAt: z.iso.datetime({ offset: true }),
+  payload: z.record(z.string(), z.unknown()).default({}),
+});
+export const syncPushSchema = z.object({
+  deviceId: z.string().trim().min(10).max(255),
+  mutations: z.array(syncMutationSchema).max(100),
 });
 export const announcementSchema = z.object({
   title: z.string().min(2).max(100),
@@ -303,6 +350,8 @@ export type PreferencesInput = z.infer<typeof preferencesSchema>;
 export type PrayerCheckInInput = z.infer<typeof prayerCheckInSchema>;
 export type HabitReminderInput = z.infer<typeof habitReminderSchema>;
 export type FirebaseInstallationInput = z.infer<typeof firebaseInstallationSchema>;
+export type SyncMutationInput = z.infer<typeof syncMutationSchema>;
+export type SyncPushInput = z.infer<typeof syncPushSchema>;
 export type PrayerSetupInput = z.infer<typeof prayerSetupSchema>;
 export type PrayerName = z.infer<typeof prayerNameSchema>;
 export type PrayerCalculationMethod = z.infer<typeof prayerCalculationMethodSchema>;

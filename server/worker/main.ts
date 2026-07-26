@@ -225,7 +225,7 @@ async function prepareReminderContent(delivery: {
     const completed = await database.query(
       `select 1 from habit_daily_logs
        where user_id = $1 and habit_id = $2 and local_date = $3::date
-         and status = 'done'`,
+         and status = 'done' and deleted_at is null`,
       [delivery.user_id, delivery.habit_id, localDate],
     );
     if (completed.rows[0]) return null;
@@ -241,6 +241,7 @@ async function prepareReminderContent(delivery: {
        from habits h
        left join habit_daily_logs l
          on l.habit_id = h.id and l.local_date = $2::date
+        and l.deleted_at is null
        where h.user_id = $1 and h.state = 'active' and h.deleted_at is null
        order by h.created_at`,
       [delivery.user_id, localDate],
@@ -280,8 +281,10 @@ async function deliverPush(
   const installations = await database.query<{
     id: string;
     installation_id: string;
+    platform: "web" | "ios" | "android";
+    push_token: string | null;
   }>(
-    `select id, installation_id
+    `select id, installation_id, platform, push_token
      from firebase_installations
      where user_id = $1
        and active = true
@@ -298,15 +301,20 @@ async function deliverPush(
   let retryableFailures = 0;
   for (let offset = 0; offset < installations.rows.length; offset += 500) {
     const batch = installations.rows.slice(offset, offset + 500);
-    const messages: Message[] = batch.map((installation) => ({
-      fid: installation.installation_id,
-      data: {
-        title: content.title,
-        body: content.body,
-        url: content.url,
-        deliveryId: delivery.id,
-      },
-    }));
+    const messages: Message[] = batch.map((installation) => {
+      const target = installation.platform === "web"
+        ? { fid: installation.installation_id }
+        : { token: installation.push_token! };
+      return {
+        ...target,
+        data: {
+          title: content.title,
+          body: content.body,
+          url: content.url,
+          deliveryId: delivery.id,
+        },
+      } as Message;
+    });
     const response = await firebaseMessaging.sendEach(messages);
     const summary = summarizeFirebaseResponses(
       response.responses.map((send) => ({

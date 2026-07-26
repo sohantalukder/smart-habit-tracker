@@ -28,6 +28,7 @@ export function LoginForm({
   );
   const [confirmationSent, setConfirmationSent] = useState(false);
   const [unverifiedEmail, setUnverifiedEmail] = useState("");
+  const [verificationCode, setVerificationCode] = useState("");
   const [pendingRestore, setPendingRestore] = useState<{
     email: string;
     password: string;
@@ -38,7 +39,7 @@ export function LoginForm({
     event.preventDefault();
     setMessage("");
     setConfirmationSent(false);
-    setUnverifiedEmail("");
+    if (!confirmationSent) setUnverifiedEmail("");
     setPendingRestore(null);
 
     const data = new FormData(event.currentTarget);
@@ -84,7 +85,24 @@ export function LoginForm({
     }
     setConfirmationSent(true);
     setUnverifiedEmail(email);
-    setMessage("Check your inbox and verify your email to enter your private space.");
+    setMessage("Enter the six-digit code sent to your email.");
+  }
+
+  async function verifyEmail() {
+    if (!unverifiedEmail || !/^\d{6}$/.test(verificationCode) || loading) return;
+    setLoading(true);
+    const response = await fetch("/api/auth/verify-email", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ email: unverifiedEmail, code: verificationCode }),
+    }).catch(() => null);
+    const result = await response?.json().catch(() => null);
+    setLoading(false);
+    if (!response?.ok) {
+      setMessage(result?.message ?? "The verification code could not be confirmed.");
+      return;
+    }
+    window.location.assign(returnTo);
   }
 
   async function restoreAccount() {
@@ -120,8 +138,8 @@ export function LoginForm({
     setConfirmationSent(Boolean(response?.ok));
     setMessage(
       response?.ok
-        ? "A new verification email is on its way."
-        : result?.message ?? "The verification email could not be sent.",
+        ? "A new six-digit code is on its way."
+        : result?.message ?? "The verification code could not be sent.",
     );
   }
 
@@ -130,6 +148,7 @@ export function LoginForm({
     setMessage("");
     setConfirmationSent(false);
     setUnverifiedEmail("");
+    setVerificationCode("");
     setPendingRestore(null);
     window.history.replaceState(
       null,
@@ -179,14 +198,40 @@ export function LoginForm({
             </div>
           )}
           {unverifiedEmail && (
-            <Button
-              type="button"
-              variant="secondary"
-              disabled={loading}
-              onClick={() => void resendVerification()}
-            >
-              Resend verification email
-            </Button>
+            <>
+              <Label className="block" htmlFor="verificationCode">
+                Verification code
+                <Input
+                  id="verificationCode"
+                  name="verificationCode"
+                  value={verificationCode}
+                  onChange={(event) =>
+                    setVerificationCode(event.target.value.replace(/\D/g, "").slice(0, 6))
+                  }
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  pattern="\d{6}"
+                  maxLength={6}
+                  placeholder="000000"
+                />
+              </Label>
+              <Button
+                type="button"
+                disabled={loading || verificationCode.length !== 6}
+                onClick={() => void verifyEmail()}
+              >
+                {loading && <LoaderCircle className="spin" size={17} />}
+                Verify email
+              </Button>
+              <Button
+                type="button"
+                variant="secondary"
+                disabled={loading}
+                onClick={() => void resendVerification()}
+              >
+                Resend code
+              </Button>
+            </>
           )}
           {pendingRestore && (
             <div className="account-restore">

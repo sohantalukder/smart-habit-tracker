@@ -61,6 +61,7 @@ export function ProfilePage() {
   const [zoom, setZoom] = useState(1);
   const [cropPixels, setCropPixels] = useState<Area | null>(null);
   const [pendingEmail, setPendingEmail] = useState("");
+  const [emailVerificationCode, setEmailVerificationCode] = useState("");
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deletePassword, setDeletePassword] = useState("");
   const [deleteConfirmation, setDeleteConfirmation] = useState("");
@@ -215,6 +216,22 @@ export function ProfilePage() {
     }
   }
 
+  async function verifyEmailChange() {
+    if (!/^\d{6}$/.test(emailVerificationCode)) return;
+    setBusy("email");
+    try {
+      await authAction("verify-email-change", { code: emailVerificationCode });
+      setPendingEmail("");
+      setEmailVerificationCode("");
+      await queryClient.invalidateQueries({ queryKey: queryKeys.user.profile });
+      toast.success("Your new sign-in email is verified.");
+    } catch (reason) {
+      toast.error(errorMessage(reason, "The verification code could not be confirmed."));
+    } finally {
+      setBusy(null);
+    }
+  }
+
   async function changePassword(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
@@ -344,9 +361,34 @@ export function ProfilePage() {
           <CardHeading icon={<Mail />} eyebrow="SIGN-IN EMAIL" title="Change email" />
           <p className="profile-card-copy">Your current address stays active until the new one is verified.</p>
           {pendingEmail && (
-            <div className="profile-success" role="status">
-              <CheckCircle2 /> <span>Verification sent to <strong>{pendingEmail}</strong>.</span>
-            </div>
+            <>
+              <div className="profile-success" role="status">
+                <CheckCircle2 /> <span>Six-digit code sent to <strong>{pendingEmail}</strong>.</span>
+              </div>
+              <Field label="Verification code">
+                <Input
+                  value={emailVerificationCode}
+                  onChange={(event) =>
+                    setEmailVerificationCode(
+                      event.target.value.replace(/\D/g, "").slice(0, 6),
+                    )
+                  }
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  pattern="\d{6}"
+                  maxLength={6}
+                  placeholder="000000"
+                />
+              </Field>
+              <Button
+                type="button"
+                disabled={busy !== null || emailVerificationCode.length !== 6}
+                onClick={() => void verifyEmailChange()}
+              >
+                {busy === "email" ? <LoaderCircle className="spin" /> : <CheckCircle2 />}
+                Verify new email
+              </Button>
+            </>
           )}
           <Field label="New email">
             <Input name="newEmail" type="email" autoComplete="email" required />

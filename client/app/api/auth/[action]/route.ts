@@ -17,16 +17,23 @@ const publicActions = new Set([
   "signup",
   "login",
   "resend-verification",
+  "verify-email",
   "restore-account",
 ]);
 const privateActions = new Set([
   "change-password",
   "request-email-change",
+  "verify-email-change",
   "sign-out-others",
   "delete-account",
   "logout",
 ]);
-const sessionActions = new Set(["login", "restore-account"]);
+const sessionActions = new Set([
+  "login",
+  "restore-account",
+  "verify-email",
+  "verify-email-change",
+]);
 
 export async function POST(
   request: Request,

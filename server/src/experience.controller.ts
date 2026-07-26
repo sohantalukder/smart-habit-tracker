@@ -167,7 +167,7 @@ export class ExperienceController {
     }>(
       `select prayer_name, status, updated_at
        from prayer_logs
-       where user_id = $1 and local_date = $2::date`,
+       where user_id = $1 and local_date = $2::date and deleted_at is null`,
       [request.user.id, localDate],
     );
     const statusByPrayer = new Map(
@@ -210,6 +210,7 @@ export class ExperienceController {
        values ($1, $2::date, $3, $4, $5)
        on conflict (user_id, local_date, prayer_name) do update
        set status = excluded.status,
+           deleted_at = null,
            updated_at = now()
        returning id, user_id, local_date, prayer_name, status,
                  created_at, updated_at`,
@@ -274,19 +275,35 @@ export class ExperienceController {
   ) {
     const parsed = firebaseInstallationSchema.safeParse(input);
     if (!parsed.success) throw new BadRequestException(parsed.error.issues);
-    await this.database.query(
+    await this.database.transaction(async (client) => {
+      if (parsed.data.pushToken) {
+        await client.query(
+          `update firebase_installations
+           set active = false, updated_at = now()
+           where push_token = $1 and installation_id <> $2`,
+          [parsed.data.pushToken, parsed.data.installationId],
+        );
+      }
+      await client.query(
       `insert into firebase_installations (
-         user_id, installation_id, platform, active
+         user_id, installation_id, platform, push_token, active
        )
-       values ($1, $2, $3, true)
+       values ($1, $2, $3, $4, true)
        on conflict (installation_id) do update
        set user_id = excluded.user_id,
            platform = excluded.platform,
+           push_token = excluded.push_token,
            active = true,
            last_seen_at = now(),
            updated_at = now()`,
-      [request.user.id, parsed.data.installationId, parsed.data.platform],
-    );
+        [
+          request.user.id,
+          parsed.data.installationId,
+          parsed.data.platform,
+          parsed.data.pushToken ?? null,
+        ],
+      );
+    });
     return { registered: true };
   }
 

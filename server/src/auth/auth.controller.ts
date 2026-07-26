@@ -13,6 +13,7 @@ import { randomUUID } from "node:crypto";
 import {
   deleteAccountSchema,
   emailChangeRequestSchema,
+  emailChangeVerificationSchema,
   emailSchema,
   loginSchema,
   passwordChangeSchema,
@@ -70,8 +71,13 @@ export class AuthController {
   async verify(@Body() body: unknown, @Ip() ip: string) {
     const parsed = verificationSchema.safeParse(body);
     if (!parsed.success) throw validationError();
-    await this.limits.consume("verify", ip, 20, 15 * 60);
-    return this.auth.verifyEmail(parsed.data.token);
+    await this.limits.consume(
+      "verify",
+      `${ip}:${normalizeEmail(parsed.data.email)}`,
+      10,
+      15 * 60,
+    );
+    return this.auth.verifyEmail(parsed.data.email, parsed.data.code);
   }
 
   @Public()
@@ -174,19 +180,27 @@ export class AuthController {
     return result;
   }
 
-  @Public()
   @Post("verify-email-change")
   @HttpCode(200)
   @Header("Cache-Control", "private, no-store, max-age=0")
   async verifyEmailChange(
     @Body() body: unknown,
+    @Req() request: AuthenticatedRequest,
     @Ip() ip: string,
     @Headers("x-correlation-id") correlationId?: string,
   ) {
-    const parsed = verificationSchema.safeParse(body);
+    const parsed = emailChangeVerificationSchema.safeParse(body);
     if (!parsed.success) throw validationError();
-    await this.limits.consume("verify-email-change", ip, 20, 15 * 60);
-    const session = await this.auth.verifyEmailChange(parsed.data.token);
+    await this.limits.consume(
+      "verify-email-change",
+      `${ip}:${request.user.id}`,
+      10,
+      15 * 60,
+    );
+    const session = await this.auth.verifyEmailChange(
+      request.user.id,
+      parsed.data.code,
+    );
     await this.audit.record({
       actorId: session.user.id,
       action: "account.email_changed",
@@ -213,6 +227,11 @@ export class AuthController {
       metadata: { count: result.signedOut },
     });
     return result;
+  }
+
+  @Get("sessions")
+  sessions(@Req() request: AuthenticatedRequest) {
+    return this.auth.listSessions(request.user.id, request.sessionId);
   }
 
   @Post("delete-account")

@@ -86,14 +86,15 @@ export class UserController {
         try {
           const result = await client.query(
             `insert into habits (
-               user_id, template_id, name, icon, category, habit_type,
+               id, user_id, template_id, name, icon, category, habit_type,
                target, unit, frequency
              )
-             values ($1, $2, $3, $4, $5, $6, $7, $8, $9::jsonb)
+             values (coalesce($1::uuid, gen_random_uuid()), $2, $3, $4, $5, $6, $7, $8, $9, $10::jsonb)
              returning id, user_id, template_id, name, icon, category, habit_type,
                        target::float8 as target, unit, frequency, forgiving, state,
                        deleted_at, created_at, updated_at`,
             [
+              value.id ?? null,
               request.user.id,
               selected.id,
               selected.name,
@@ -116,13 +117,14 @@ export class UserController {
     }
     const result = await this.database.query(
       `insert into habits (
-         user_id, name, icon, category, habit_type, target, unit, frequency, forgiving
+         id, user_id, name, icon, category, habit_type, target, unit, frequency, forgiving
        )
-       values ($1, $2, $3, $4, $5, $6, $7, $8::jsonb, $9)
+       values (coalesce($1::uuid, gen_random_uuid()), $2, $3, $4, $5, $6, $7, $8, $9::jsonb, $10)
        returning id, user_id, template_id, name, icon, category, habit_type,
                  target::float8 as target, unit, frequency, forgiving, state,
                  deleted_at, created_at, updated_at`,
       [
+        value.id ?? null,
         request.user.id,
         value.name,
         value.icon,
@@ -163,7 +165,7 @@ export class UserController {
         `select id, habit_id, user_id, local_date, status,
                 value::float8 as value, note, prayer_status, created_at, updated_at
          from habit_daily_logs
-         where user_id = $1 and local_date = $2::date`,
+         where user_id = $1 and local_date = $2::date and deleted_at is null`,
         [request.user.id, date],
       ),
     ]);
@@ -209,6 +211,7 @@ export class UserController {
              value = excluded.value,
              note = excluded.note,
              prayer_status = excluded.prayer_status,
+             deleted_at = null,
              updated_at = now()
          returning id, habit_id, user_id, local_date, status,
                    value::float8 as value, note, prayer_status, created_at, updated_at`,
@@ -235,7 +238,8 @@ export class UserController {
   ) {
     assertLocalDate(localDate);
     await this.database.query(
-      `delete from habit_daily_logs
+      `update habit_daily_logs
+       set deleted_at = now(), updated_at = now()
        where habit_id = $1 and user_id = $2 and local_date = $3::date`,
       [habitId, request.user.id, localDate],
     );
@@ -314,6 +318,7 @@ export class UserController {
         `select habit_id, local_date, status, value::float8 as value, note
          from habit_daily_logs
          where user_id = $1
+           and deleted_at is null
            and local_date between $2::date and $3::date
          order by local_date, created_at`,
         [request.user.id, from, to],

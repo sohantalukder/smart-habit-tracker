@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Bloom Smart Habit REST API",
-    "version": "1.3.0",
+    "version": "1.4.0",
     "description": "Versioned API contract for web and native mobile clients."
   },
   "servers": [
@@ -314,7 +314,14 @@
           }
         },
         "responses": {
-          "202": { "description": "New email verification requested." },
+          "202": {
+            "description": "New email verification requested.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/EmailChangePending" }
+              }
+            }
+          },
           "400": { "$ref": "#/components/responses/Error" },
           "401": { "$ref": "#/components/responses/Error" },
           "409": { "$ref": "#/components/responses/Error" },
@@ -325,12 +332,11 @@
     "/auth/verify-email-change": {
       "post": {
         "operationId": "verifyEmailChange",
-        "security": [],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
-              "schema": { "$ref": "#/components/schemas/VerificationInput" }
+              "schema": { "$ref": "#/components/schemas/EmailChangeVerificationInput" }
             }
           }
         },
@@ -354,6 +360,25 @@
         "operationId": "signOutOtherSessions",
         "responses": {
           "200": { "description": "Other sessions revoked." },
+          "401": { "$ref": "#/components/responses/Error" }
+        }
+      }
+    },
+    "/auth/sessions": {
+      "get": {
+        "operationId": "listAuthSessions",
+        "responses": {
+          "200": {
+            "description": "Active sessions for the current user.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/ActiveSession" }
+                }
+              }
+            }
+          },
           "401": { "$ref": "#/components/responses/Error" }
         }
       }
@@ -1711,6 +1736,67 @@
           }
         }
       }
+    },
+    "/sync/push": {
+      "post": {
+        "operationId": "pushSyncMutations",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/SyncPushInput" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Ordered mutations processed idempotently.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/SyncPushResponse" }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/Error" },
+          "401": { "$ref": "#/components/responses/Error" }
+        }
+      }
+    },
+    "/sync/pull": {
+      "get": {
+        "operationId": "pullSyncChanges",
+        "parameters": [
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 500,
+              "default": 500
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Initial snapshot or incremental user changes.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/SyncPullResponse" }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/Error" },
+          "401": { "$ref": "#/components/responses/Error" }
+        }
+      }
     }
   },
   "components": {
@@ -1872,14 +1958,37 @@
       "VerificationInput": {
         "type": "object",
         "required": [
-          "token"
+          "email",
+          "code"
         ],
         "properties": {
-          "token": {
+          "email": {
             "type": "string",
-            "minLength": 32,
-            "maxLength": 200
+            "format": "email",
+            "maxLength": 254
+          },
+          "code": {
+            "type": "string",
+            "pattern": "^\\d{6}$"
           }
+        }
+      },
+      "EmailChangeVerificationInput": {
+        "type": "object",
+        "required": ["code"],
+        "properties": {
+          "code": {
+            "type": "string",
+            "pattern": "^\\d{6}$"
+          }
+        }
+      },
+      "EmailChangePending": {
+        "type": "object",
+        "required": ["pendingEmail", "expiresAt"],
+        "properties": {
+          "pendingEmail": { "type": "string", "format": "email" },
+          "expiresAt": { "type": "string", "format": "date-time" }
         }
       },
       "ProfileUpdateInput": {
@@ -1996,12 +2105,22 @@
         "type": "object",
         "required": [
           "requiresVerification",
+          "email",
+          "expiresAt",
           "message"
         ],
         "properties": {
           "requiresVerification": {
             "type": "boolean",
             "const": true
+          },
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
           },
           "message": {
             "type": "string"
@@ -2013,7 +2132,8 @@
         "required": [
           "id",
           "email",
-          "name"
+          "name",
+          "onboardingCompleted"
         ],
         "properties": {
           "id": {
@@ -2026,6 +2146,9 @@
           },
           "name": {
             "type": "string"
+          },
+          "onboardingCompleted": {
+            "type": "boolean"
           }
         }
       },
@@ -2047,6 +2170,16 @@
           "user": {
             "$ref": "#/components/schemas/AuthUser"
           }
+        }
+      },
+      "ActiveSession": {
+        "type": "object",
+        "required": ["id", "current", "createdAt", "expiresAt"],
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "current": { "type": "boolean" },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "expiresAt": { "type": "string", "format": "date-time" }
         }
       },
       "SupportSession": {
@@ -2359,6 +2492,10 @@
           "templateId"
         ],
         "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
           "templateId": {
             "type": "string",
             "format": "uuid"
@@ -2375,6 +2512,10 @@
           "frequency"
         ],
         "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
           "name": {
             "type": "string",
             "minLength": 1,
@@ -3354,9 +3495,117 @@
           },
           "platform": {
             "type": "string",
-            "const": "web",
+            "enum": ["web", "ios", "android"],
             "default": "web"
+          },
+          "pushToken": {
+            "type": "string",
+            "minLength": 10,
+            "maxLength": 4096
           }
+        }
+      },
+      "SyncEntityType": {
+        "type": "string",
+        "enum": [
+          "profile",
+          "preferences",
+          "habit",
+          "habit_log",
+          "journal",
+          "prayer_log",
+          "habit_reminder",
+          "prayer_reminder",
+          "onboarding",
+          "push_installation"
+        ]
+      },
+      "SyncMutation": {
+        "type": "object",
+        "required": [
+          "mutationId",
+          "entityType",
+          "entityId",
+          "operation",
+          "clientModifiedAt",
+          "payload"
+        ],
+        "properties": {
+          "mutationId": { "type": "string", "format": "uuid" },
+          "entityType": { "$ref": "#/components/schemas/SyncEntityType" },
+          "entityId": { "type": "string", "minLength": 1, "maxLength": 255 },
+          "operation": { "type": "string", "enum": ["upsert", "delete"] },
+          "clientModifiedAt": { "type": "string", "format": "date-time" },
+          "payload": { "type": "object", "additionalProperties": true }
+        }
+      },
+      "SyncPushInput": {
+        "type": "object",
+        "required": ["deviceId", "mutations"],
+        "properties": {
+          "deviceId": { "type": "string", "minLength": 10, "maxLength": 255 },
+          "mutations": {
+            "type": "array",
+            "maxItems": 100,
+            "items": { "$ref": "#/components/schemas/SyncMutation" }
+          }
+        }
+      },
+      "SyncMutationResult": {
+        "type": "object",
+        "required": ["mutationId", "status"],
+        "properties": {
+          "mutationId": { "type": "string", "format": "uuid" },
+          "status": {
+            "type": "string",
+            "enum": ["applied", "superseded", "retryable", "rejected"]
+          },
+          "canonical": {},
+          "code": { "type": "string" },
+          "message": { "type": "string" }
+        }
+      },
+      "SyncPushResponse": {
+        "type": "object",
+        "required": ["results", "serverTime"],
+        "properties": {
+          "results": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/SyncMutationResult" }
+          },
+          "serverTime": { "type": "string", "format": "date-time" }
+        }
+      },
+      "SyncChange": {
+        "type": "object",
+        "required": [
+          "sequence",
+          "entityType",
+          "entityId",
+          "operation",
+          "changedAt"
+        ],
+        "properties": {
+          "sequence": { "type": "string" },
+          "entityType": { "type": "string" },
+          "entityId": { "type": "string" },
+          "operation": { "type": "string", "enum": ["upsert", "delete"] },
+          "payload": { "type": ["object", "null"], "additionalProperties": true },
+          "changedAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "SyncPullResponse": {
+        "type": "object",
+        "required": ["changes", "nextCursor", "hasMore", "serverTime"],
+        "properties": {
+          "snapshot": { "type": "object", "additionalProperties": true },
+          "changes": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/SyncChange" }
+          },
+          "nextCursor": { "type": "string" },
+          "hasMore": { "type": "boolean" },
+          "serverTime": { "type": "string", "format": "date-time" }
         }
       }
     }

@@ -212,6 +212,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/auth/sessions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listAuthSessions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/auth/delete-account": {
         parameters: {
             query?: never;
@@ -900,6 +916,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/sync/push": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["pushSyncMutations"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/sync/pull": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["pullSyncChanges"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -940,7 +988,18 @@ export interface components {
             email: string;
         };
         VerificationInput: {
-            token: string;
+            /** Format: email */
+            email: string;
+            code: string;
+        };
+        EmailChangeVerificationInput: {
+            code: string;
+        };
+        EmailChangePending: {
+            /** Format: email */
+            pendingEmail: string;
+            /** Format: date-time */
+            expiresAt: string;
         };
         ProfileUpdateInput: {
             name: string;
@@ -1000,6 +1059,10 @@ export interface components {
         VerificationRequired: {
             /** @constant */
             requiresVerification: true;
+            /** Format: email */
+            email: string;
+            /** Format: date-time */
+            expiresAt: string;
             message: string;
         };
         AuthUser: {
@@ -1008,12 +1071,22 @@ export interface components {
             /** Format: email */
             email: string;
             name: string;
+            onboardingCompleted: boolean;
         };
         AuthSession: {
             accessToken: string;
             /** Format: date-time */
             expiresAt: string;
             user: components["schemas"]["AuthUser"];
+        };
+        ActiveSession: {
+            /** Format: uuid */
+            id: string;
+            current: boolean;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            expiresAt: string;
         };
         SupportSession: {
             /** Format: uuid */
@@ -1089,9 +1162,13 @@ export interface components {
         CreateHabitInput: components["schemas"]["TemplateHabitInput"] | components["schemas"]["CustomHabitInput"];
         TemplateHabitInput: {
             /** Format: uuid */
+            id?: string;
+            /** Format: uuid */
             templateId: string;
         };
         CustomHabitInput: {
+            /** Format: uuid */
+            id?: string;
             name: string;
             icon: string;
             /** @enum {string} */
@@ -1331,9 +1408,65 @@ export interface components {
             installationId: string;
             /**
              * @default web
-             * @constant
+             * @enum {string}
              */
-            platform: "web";
+            platform: "web" | "ios" | "android";
+            pushToken?: string;
+        };
+        /** @enum {string} */
+        SyncEntityType: "profile" | "preferences" | "habit" | "habit_log" | "journal" | "prayer_log" | "habit_reminder" | "prayer_reminder" | "onboarding" | "push_installation";
+        SyncMutation: {
+            /** Format: uuid */
+            mutationId: string;
+            entityType: components["schemas"]["SyncEntityType"];
+            entityId: string;
+            /** @enum {string} */
+            operation: "upsert" | "delete";
+            /** Format: date-time */
+            clientModifiedAt: string;
+            payload: {
+                [key: string]: unknown;
+            };
+        };
+        SyncPushInput: {
+            deviceId: string;
+            mutations: components["schemas"]["SyncMutation"][];
+        };
+        SyncMutationResult: {
+            /** Format: uuid */
+            mutationId: string;
+            /** @enum {string} */
+            status: "applied" | "superseded" | "retryable" | "rejected";
+            canonical?: unknown;
+            code?: string;
+            message?: string;
+        };
+        SyncPushResponse: {
+            results: components["schemas"]["SyncMutationResult"][];
+            /** Format: date-time */
+            serverTime: string;
+        };
+        SyncChange: {
+            sequence: string;
+            entityType: string;
+            entityId: string;
+            /** @enum {string} */
+            operation: "upsert" | "delete";
+            payload?: {
+                [key: string]: unknown;
+            } | null;
+            /** Format: date-time */
+            changedAt: string;
+        };
+        SyncPullResponse: {
+            snapshot?: {
+                [key: string]: unknown;
+            };
+            changes: components["schemas"]["SyncChange"][];
+            nextCursor: string;
+            hasMore: boolean;
+            /** Format: date-time */
+            serverTime: string;
         };
     };
     responses: {
@@ -1621,7 +1754,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["EmailChangePending"];
+                };
             };
             400: components["responses"]["Error"];
             401: components["responses"]["Error"];
@@ -1638,7 +1773,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["VerificationInput"];
+                "application/json": components["schemas"]["EmailChangeVerificationInput"];
             };
         };
         responses: {
@@ -1671,6 +1806,27 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            401: components["responses"]["Error"];
+        };
+    };
+    listAuthSessions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Active sessions for the current user. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActiveSession"][];
+                };
             };
             401: components["responses"]["Error"];
         };
@@ -2965,6 +3121,57 @@ export interface operations {
                     };
                 };
             };
+        };
+    };
+    pushSyncMutations: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SyncPushInput"];
+            };
+        };
+        responses: {
+            /** @description Ordered mutations processed idempotently. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SyncPushResponse"];
+                };
+            };
+            400: components["responses"]["Error"];
+            401: components["responses"]["Error"];
+        };
+    };
+    pullSyncChanges: {
+        parameters: {
+            query?: {
+                cursor?: string;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Initial snapshot or incremental user changes. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SyncPullResponse"];
+                };
+            };
+            400: components["responses"]["Error"];
+            401: components["responses"]["Error"];
         };
     };
 }

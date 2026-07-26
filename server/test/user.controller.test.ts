@@ -202,7 +202,7 @@ describe("UserController tracking report", () => {
 });
 
 describe("UserController check-in removal", () => {
-  it("deletes only the authenticated user's log for the selected date", async () => {
+  it("soft deletes only the authenticated user's log for the selected date", async () => {
     const database = {
       query: vi.fn().mockResolvedValue({ rows: [], rowCount: 1 }),
     } as unknown as DatabaseService;
@@ -211,7 +211,7 @@ describe("UserController check-in removal", () => {
     await expect(controller.removeCheckIn(request, "habit-1", "2026-07-26"))
       .resolves.toEqual({ deleted: true });
     expect(database.query).toHaveBeenCalledWith(
-      expect.stringContaining("delete from habit_daily_logs"),
+      expect.stringContaining("update habit_daily_logs"),
       ["habit-1", request.user.id, "2026-07-26"],
     );
   });

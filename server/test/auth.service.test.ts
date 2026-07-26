@@ -3,6 +3,7 @@ import { AuthService } from "../src/auth/auth.service";
 import { hashPassword } from "../src/auth/password";
 import type { DatabaseService } from "../src/platform/database.service";
 import type { VerificationEmailService } from "../src/auth/verification-email.service";
+import { hashOtpCode } from "../src/auth/token";
 
 describe("AuthService", () => {
   it("blocks a correct password until the account email is verified", async () => {
@@ -31,23 +32,33 @@ describe("AuthService", () => {
     })).rejects.toMatchObject({ status: 403 });
   });
 
-  it("consumes a valid verification token and creates an opaque session", async () => {
+  it("consumes a valid six-digit verification code and creates an opaque session", async () => {
     const userId = "4245f96d-1a2b-4f3c-9d5e-112233445566";
+    const requestId = "5245f96d-1a2b-4f3c-9d5e-112233445566";
+    const code = "123456";
     const client = {
       query: vi.fn(async (sql: string) => {
         if (sql.includes("from email_verification_tokens")) {
           return {
             rows: [{
-              id: "5245f96d-1a2b-4f3c-9d5e-112233445566",
+              id: requestId,
               user_id: userId,
+              token_hash: hashOtpCode(requestId, "email_verification", code),
               expires_at: new Date(Date.now() + 60_000),
               consumed_at: null,
+              attempt_count: 0,
+              locked_at: null,
             }],
           };
         }
         if (sql.includes("select u.id, u.email, p.name")) {
           return {
-            rows: [{ id: userId, email: "user@example.com", name: "User" }],
+            rows: [{
+              id: userId,
+              email: "user@example.com",
+              name: "User",
+              onboardingCompleted: false,
+            }],
           };
         }
         return { rows: [] };
@@ -61,7 +72,7 @@ describe("AuthService", () => {
       { send: vi.fn() } as unknown as VerificationEmailService,
     );
 
-    const session = await service.verifyEmail("a".repeat(43));
+    const session = await service.verifyEmail("user@example.com", code);
 
     expect(session.user.email).toBe("user@example.com");
     expect(session.accessToken.length).toBeGreaterThanOrEqual(32);
@@ -93,6 +104,7 @@ describe("AuthService", () => {
           user_id: "4245f96d-1a2b-4f3c-9d5e-112233445566",
           email: "user@example.com",
           name: "User",
+          onboarding_completed_at: null,
         }],
       }),
     } as unknown as DatabaseService;

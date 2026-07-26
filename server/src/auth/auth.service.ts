@@ -1,4 +1,5 @@
 import { Injectable } from "@nestjs/common";
+import { randomUUID } from "node:crypto";
 import type { DatabaseClient } from "../platform/database.service";
 import { DatabaseService } from "../platform/database.service";
 import { ApiException } from "../platform/api.exception";
@@ -10,10 +11,17 @@ import type {
   SignupInput,
 } from "../contracts";
 import { hashPassword, verifyPassword } from "./password";
-import { createSecretToken, hashSecretToken } from "./token";
+import {
+  createOtpCode,
+  createSecretToken,
+  hashOtpCode,
+  hashSecretToken,
+  otpMatches,
+} from "./token";
 import { VerificationEmailService } from "./verification-email.service";
 
-const VERIFICATION_LIFETIME_MS = 24 * 60 * 60 * 1000;
+const VERIFICATION_LIFETIME_MS = 10 * 60 * 1000;
+const MAX_VERIFICATION_ATTEMPTS = 5;
 const SESSION_LIFETIME_MS = 30 * 24 * 60 * 60 * 1000;
 
 type UserAuthRow = {
@@ -31,6 +39,7 @@ export type AuthenticatedUser = {
   id: string;
   email: string;
   name: string;
+  onboardingCompleted: boolean;
 };
 
 export type SessionResult = {
@@ -83,19 +92,37 @@ export class AuthService {
          where user_id = $1 and consumed_at is null`,
         [userId],
       );
-      const token = createSecretToken();
+      const requestId = randomUUID();
+      const code = createOtpCode();
+      const expiresAt = new Date(Date.now() + VERIFICATION_LIFETIME_MS);
       await client.query(
-        `insert into email_verification_tokens (user_id, token_hash, expires_at)
-         values ($1, $2, $3)`,
-        [userId, hashSecretToken(token), new Date(Date.now() + VERIFICATION_LIFETIME_MS)],
+        `insert into email_verification_tokens (
+           id, user_id, token_hash, expires_at
+         )
+         values ($1, $2, $3, $4)`,
+        [
+          requestId,
+          userId,
+          hashOtpCode(requestId, "email_verification", code),
+          expiresAt,
+        ],
       );
-      return { email: normalizedEmail, token };
+      return { email: normalizedEmail, code, expiresAt };
     });
 
-    if (verification) await this.email.send(verification.email, verification.token);
+    if (verification) {
+      await this.email.send(
+        verification.email,
+        verification.code,
+        verification.expiresAt,
+      );
+    }
     return {
       requiresVerification: true as const,
-      message: "If the address can be registered, a verification email is on its way.",
+      email: normalizedEmail,
+      expiresAt: verification?.expiresAt.toISOString()
+        ?? new Date(Date.now() + VERIFICATION_LIFETIME_MS).toISOString(),
+      message: "If the address can be registered, a verification code is on its way.",
     };
   }
 
@@ -118,46 +145,87 @@ export class AuthService {
          where user_id = $1 and consumed_at is null`,
         [user.id],
       );
-      const token = createSecretToken();
+      const requestId = randomUUID();
+      const code = createOtpCode();
+      const expiresAt = new Date(Date.now() + VERIFICATION_LIFETIME_MS);
       await client.query(
-        `insert into email_verification_tokens (user_id, token_hash, expires_at)
-         values ($1, $2, $3)`,
-        [user.id, hashSecretToken(token), new Date(Date.now() + VERIFICATION_LIFETIME_MS)],
+        `insert into email_verification_tokens (
+           id, user_id, token_hash, expires_at
+         )
+         values ($1, $2, $3, $4)`,
+        [
+          requestId,
+          user.id,
+          hashOtpCode(requestId, "email_verification", code),
+          expiresAt,
+        ],
       );
-      return { email: user.email, token };
+      return { email: user.email, code, expiresAt };
     });
-    if (verification) await this.email.send(verification.email, verification.token);
+    if (verification) {
+      await this.email.send(
+        verification.email,
+        verification.code,
+        verification.expiresAt,
+      );
+    }
     return {
       requiresVerification: true as const,
-      message: "If the account needs verification, a new email is on its way.",
+      email: normalizedEmail,
+      expiresAt: verification?.expiresAt.toISOString()
+        ?? new Date(Date.now() + VERIFICATION_LIFETIME_MS).toISOString(),
+      message: "If the account needs verification, a new code is on its way.",
     };
   }
 
-  async verifyEmail(token: string): Promise<SessionResult> {
-    return this.database.transaction(async (client) => {
+  async verifyEmail(rawEmail: string, code: string): Promise<SessionResult> {
+    const normalizedEmail = normalizeEmail(rawEmail);
+    const result = await this.database.transaction(async (client) => {
       const result = await client.query<{
         id: string;
         user_id: string;
+        token_hash: Buffer;
         expires_at: Date;
         consumed_at: Date | null;
+        attempt_count: number;
+        locked_at: Date | null;
       }>(
-        `select id, user_id, expires_at, consumed_at
-         from email_verification_tokens
-         where token_hash = $1
+        `select t.id, t.user_id, t.token_hash, t.expires_at, t.consumed_at,
+                t.attempt_count, t.locked_at
+         from email_verification_tokens t
+         join users u on u.id = t.user_id
+         where u.email = $1
+           and t.consumed_at is null
+         order by t.created_at desc
+         limit 1
          for update`,
-        [hashSecretToken(token)],
+        [normalizedEmail],
       );
       const verification = result.rows[0];
       if (
         !verification ||
         verification.consumed_at ||
+        verification.locked_at ||
+        verification.attempt_count >= MAX_VERIFICATION_ATTEMPTS ||
         verification.expires_at.getTime() <= Date.now()
       ) {
-        throw new ApiException(
-          400,
-          "INVALID_VERIFICATION_TOKEN",
-          "This verification link is invalid or has expired.",
+        return { kind: "invalid" as const };
+      }
+      const candidate = hashOtpCode(
+        verification.id,
+        "email_verification",
+        code,
+      );
+      if (!otpMatches(verification.token_hash, candidate)) {
+        await client.query(
+          `update email_verification_tokens
+           set attempt_count = least(attempt_count + 1, $2),
+               last_attempt_at = now(),
+               locked_at = case when attempt_count + 1 >= $2 then now() else null end
+           where id = $1`,
+          [verification.id, MAX_VERIFICATION_ATTEMPTS],
         );
+        return { kind: "invalid" as const };
       }
       await client.query(
         "update email_verification_tokens set consumed_at = now() where id = $1",
@@ -173,8 +241,13 @@ export class AuthService {
          where user_id = $1 and consumed_at is null`,
         [verification.user_id],
       );
-      return this.createSession(client, verification.user_id);
+      return {
+        kind: "success" as const,
+        session: await this.createSession(client, verification.user_id),
+      };
     });
+    if (result.kind === "invalid") throw invalidOtp();
+    return result.session;
   }
 
   async login(input: LoginInput): Promise<SessionResult> {
@@ -365,7 +438,9 @@ export class AuthService {
       );
     }
 
-    const token = createSecretToken();
+    const requestId = randomUUID();
+    const code = createOtpCode();
+    const expiresAt = new Date(Date.now() + VERIFICATION_LIFETIME_MS);
     try {
       await this.database.transaction(async (client) => {
         const existing = await client.query(
@@ -389,18 +464,23 @@ export class AuthService {
         );
         await client.query(
           `insert into email_change_tokens (
-             user_id, pending_email, token_hash, expires_at
+             id, user_id, pending_email, token_hash, expires_at
            )
-           values ($1, $2, $3, $4)`,
+           values ($1, $2, $3, $4, $5)`,
           [
+            requestId,
             userId,
             normalizedEmail,
-            hashSecretToken(token),
-            new Date(Date.now() + VERIFICATION_LIFETIME_MS),
+            hashOtpCode(requestId, "email_change", code),
+            expiresAt,
           ],
         );
       });
-      await this.email.sendEmailChangeVerification(normalizedEmail, token);
+      await this.email.sendEmailChangeVerification(
+        normalizedEmail,
+        code,
+        expiresAt,
+      );
     } catch (error) {
       if (error instanceof ApiException) throw error;
       if (isUniqueViolation(error)) {
@@ -422,41 +502,63 @@ export class AuthService {
     return {
       verificationRequired: true as const,
       pendingEmail: normalizedEmail,
+      expiresAt: expiresAt.toISOString(),
     };
   }
 
-  async verifyEmailChange(token: string): Promise<SessionResult> {
+  async verifyEmailChange(userId: string, code: string): Promise<SessionResult> {
     const result = await this.database.transaction(async (client) => {
       const tokenResult = await client.query<{
         id: string;
         user_id: string;
         pending_email: string;
+        token_hash: Buffer;
         expires_at: Date;
         consumed_at: Date | null;
+        attempt_count: number;
+        locked_at: Date | null;
         current_email: string;
       }>(
-        `select t.id, t.user_id, t.pending_email, t.expires_at, t.consumed_at,
+        `select t.id, t.user_id, t.pending_email, t.token_hash, t.expires_at,
+                t.consumed_at, t.attempt_count, t.locked_at,
                 u.email as current_email
          from email_change_tokens t
          join users u on u.id = t.user_id
          join profiles p on p.id = t.user_id
-         where t.token_hash = $1
+         where t.user_id = $1
+           and t.consumed_at is null
            and p.deleted_at is null
            and p.suspended_at is null
+         order by t.created_at desc
+         limit 1
          for update`,
-        [hashSecretToken(token)],
+        [userId],
       );
       const verification = tokenResult.rows[0];
       if (
         !verification ||
         verification.consumed_at ||
+        verification.locked_at ||
+        verification.attempt_count >= MAX_VERIFICATION_ATTEMPTS ||
         verification.expires_at.getTime() <= Date.now()
       ) {
-        throw new ApiException(
-          400,
-          "INVALID_VERIFICATION_TOKEN",
-          "This verification link is invalid or has expired.",
+        return {
+          kind: "invalid" as const,
+        };
+      }
+      const candidate = hashOtpCode(verification.id, "email_change", code);
+      if (!otpMatches(verification.token_hash, candidate)) {
+        await client.query(
+          `update email_change_tokens
+           set attempt_count = least(attempt_count + 1, $2),
+               last_attempt_at = now(),
+               locked_at = case when attempt_count + 1 >= $2 then now() else null end
+           where id = $1`,
+          [verification.id, MAX_VERIFICATION_ATTEMPTS],
         );
+        return {
+          kind: "invalid" as const,
+        };
       }
       const existing = await client.query(
         "select 1 from users where email = $1 and id <> $2",
@@ -489,6 +591,7 @@ export class AuthService {
       );
       const session = await this.createSession(client, verification.user_id);
       return {
+        kind: "success" as const,
         session,
         oldEmail: verification.current_email,
         newEmail: verification.pending_email,
@@ -503,6 +606,7 @@ export class AuthService {
       }
       throw error;
     });
+    if (result.kind === "invalid") throw invalidOtp();
     await Promise.all([
       this.email.sendSecurityNotice(
         result.oldEmail,
@@ -526,6 +630,25 @@ export class AuthService {
       [userId, currentSessionId],
     );
     return { signedOut: result.rowCount ?? 0 };
+  }
+
+  async listSessions(userId: string, currentSessionId: string) {
+    const result = await this.database.query<{
+      id: string;
+      created_at: Date;
+      expires_at: Date;
+    }>(
+      `select id,created_at,expires_at from user_sessions
+       where user_id=$1 and revoked_at is null and expires_at > now()
+       order by created_at desc`,
+      [userId],
+    );
+    return result.rows.map((session) => ({
+      id: session.id,
+      current: session.id === currentSessionId,
+      createdAt: session.created_at,
+      expiresAt: session.expires_at,
+    }));
   }
 
   async deleteAccount(userId: string, input: DeleteAccountInput) {
@@ -588,8 +711,10 @@ export class AuthService {
       user_id: string;
       email: string;
       name: string;
+      onboarding_completed_at: Date | null;
     }>(
-      `select s.id as session_id, u.id as user_id, u.email, p.name
+      `select s.id as session_id, u.id as user_id, u.email, p.name,
+              p.onboarding_completed_at
        from user_sessions s
        join users u on u.id = s.user_id
        join profiles p on p.id = u.id
@@ -615,6 +740,7 @@ export class AuthService {
         id: session.user_id,
         email: session.email,
         name: session.name,
+        onboardingCompleted: Boolean(session.onboarding_completed_at),
       },
     };
   }
@@ -639,7 +765,8 @@ export class AuthService {
       [userId, hashSecretToken(accessToken), expiresAt],
     );
     const result = await client.query<AuthenticatedUser>(
-      `select u.id, u.email, p.name
+      `select u.id, u.email, p.name,
+              (p.onboarding_completed_at is not null) as "onboardingCompleted"
        from users u
        join profiles p on p.id = u.id
        where u.id = $1`,
@@ -661,5 +788,15 @@ function isUniqueViolation(error: unknown) {
     typeof error === "object" &&
     "code" in error &&
     error.code === "23505",
+  );
+}
+
+function invalidOtp() {
+  return new ApiException(
+    400,
+    "INVALID_VERIFICATION_CODE",
+    "The verification code is invalid, expired, or has too many failed attempts.",
+    false,
+    { code: ["Enter the newest six-digit code sent to your email."] },
   );
 }

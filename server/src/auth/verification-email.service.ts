@@ -8,31 +8,32 @@ export class VerificationEmailService {
     ? new Resend(process.env.RESEND_API_KEY)
     : null;
 
-  async send(email: string, token: string) {
-    const siteUrl = (process.env.SITE_URL ?? "http://localhost:3000").replace(/\/$/, "");
-    const url = `${siteUrl}/auth/verify?token=${encodeURIComponent(token)}`;
+  async send(email: string, code: string, expiresAt: Date) {
     if (process.env.NODE_ENV !== "production") {
-      this.logDevelopmentLink("auth.verification_link", email, token, url);
+      this.logDevelopmentCode("auth.verification_otp", email, code, expiresAt);
       return;
     }
     await this.deliverRequired(
       email,
       "Verify your Bloom account",
-      `Verify your Bloom account by opening this link within 24 hours:\n\n${url}`,
+      `Your Bloom verification code is ${code}.\n\nIt expires in 10 minutes. If you did not create this account, you can ignore this message.`,
     );
   }
 
-  async sendEmailChangeVerification(email: string, token: string) {
-    const siteUrl = (process.env.SITE_URL ?? "http://localhost:3000").replace(/\/$/, "");
-    const url = `${siteUrl}/auth/verify-email-change?token=${encodeURIComponent(token)}`;
+  async sendEmailChangeVerification(email: string, code: string, expiresAt: Date) {
     if (process.env.NODE_ENV !== "production") {
-      this.logDevelopmentLink("auth.email_change_verification_link", email, token, url);
+      this.logDevelopmentCode(
+        "auth.email_change_verification_otp",
+        email,
+        code,
+        expiresAt,
+      );
       return;
     }
     await this.deliverRequired(
       email,
       "Verify your new Bloom email",
-      `Confirm this email address for your Bloom account within 24 hours:\n\n${url}\n\nIf you did not request this change, you can ignore this message.`,
+      `Your Bloom email-change code is ${code}.\n\nIt expires in 10 minutes. If you did not request this change, you can ignore this message.`,
     );
   }
 
@@ -94,12 +95,17 @@ export class VerificationEmailService {
     }
   }
 
-  private logDevelopmentLink(
+  private logDevelopmentCode(
     event: string,
     email: string,
-    token: string,
-    url: string,
+    code: string,
+    expiresAt: Date,
   ) {
-    console.info(JSON.stringify({ event, email, token, url }));
+    console.info(JSON.stringify({
+      event,
+      email,
+      code,
+      expiresAt: expiresAt.toISOString(),
+    }));
   }
 }

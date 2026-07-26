@@ -16,6 +16,8 @@ import { ExperienceController } from "./experience.controller";
 import { PrayerTimeService } from "./prayer/prayer-time.service";
 import { ProfileController } from "./profile/profile.controller";
 import { AvatarStorageService } from "./profile/avatar-storage.service";
+import { SyncController } from "./sync/sync.controller";
+import { SyncService } from "./sync/sync.service";
 
 @Module({
   controllers: [
@@ -25,6 +27,7 @@ import { AvatarStorageService } from "./profile/avatar-storage.service";
     ProfileController,
     UserController,
     ExperienceController,
+    SyncController,
     AdminController,
   ],
   providers: [
@@ -36,6 +39,7 @@ import { AvatarStorageService } from "./profile/avatar-storage.service";
     VerificationEmailService,
     PrayerTimeService,
     AvatarStorageService,
+    SyncService,
     { provide: APP_GUARD, useClass: AuthGuard },
   ],
 })

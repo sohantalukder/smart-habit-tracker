@@ -19,21 +19,22 @@ describe("VerificationEmailService", () => {
     mocks.send.mockReset();
   });
 
-  it("prints the verification token and URL without sending email in development", async () => {
+  it("prints structured OTP and expiry data without sending email in development", async () => {
     vi.stubEnv("NODE_ENV", "development");
     vi.stubEnv("RESEND_API_KEY", "re_test");
     vi.stubEnv("SITE_URL", "http://localhost:3000");
     const log = vi.spyOn(console, "info").mockImplementation(() => undefined);
     const service = new VerificationEmailService();
 
-    await service.send("user@example.com", "verification-token");
+    const expiresAt = new Date("2026-07-26T12:10:00.000Z");
+    await service.send("user@example.com", "123456", expiresAt);
 
     expect(mocks.send).not.toHaveBeenCalled();
     expect(log).toHaveBeenCalledWith(JSON.stringify({
-      event: "auth.verification_link",
+      event: "auth.verification_otp",
       email: "user@example.com",
-      token: "verification-token",
-      url: "http://localhost:3000/auth/verify?token=verification-token",
+      code: "123456",
+      expiresAt: expiresAt.toISOString(),
     }));
   });
 
@@ -43,7 +44,7 @@ describe("VerificationEmailService", () => {
     const service = new VerificationEmailService();
 
     await expect(
-      service.send("user@example.com", "verification-token"),
+      service.send("user@example.com", "123456", new Date()),
     ).rejects.toMatchObject({
       status: 503,
       response: { code: "EMAIL_UNAVAILABLE" },
@@ -57,7 +58,7 @@ describe("VerificationEmailService", () => {
     const service = new VerificationEmailService();
 
     await expect(
-      service.send("user@example.com", "verification-token"),
+      service.send("user@example.com", "123456", new Date()),
     ).rejects.toMatchObject({
       status: 503,
       response: { code: "EMAIL_UNAVAILABLE" },

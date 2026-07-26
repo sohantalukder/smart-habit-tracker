@@ -49,6 +49,8 @@ services:
         sync: false
       - key: EMAIL_FROM
         sync: false
+      - key: AUTH_OTP_SECRET
+        sync: false
       - key: FIREBASE_SERVICE_ACCOUNT_JSON_BASE64
         sync: false
       - key: FIREBASE_STORAGE_BUCKET
