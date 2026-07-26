@@ -10,8 +10,8 @@ import {
   LoaderCircle,
   MapPin,
   Sparkles,
-  Sprout,
 } from "lucide-react";
+import { BloomMark } from "@/components/bloom-mark";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -257,7 +257,7 @@ export function OnboardingFlow({ initialName }: { initialName: string }) {
     <main className="onboarding-shell">
       <section className="onboarding-card">
         <header className="onboarding-header">
-          <a href="/" className="bloom-brand"><span><Sprout size={20} /></span><strong>Bloom</strong></a>
+          <a href="/" className="bloom-brand"><span><BloomMark /></span><strong>Bloom</strong></a>
           <span>STEP {step} OF {visibleSteps}</span>
         </header>
         <div className="onboarding-progress"><i style={{ width: `${progress}%` }} /></div>

@@ -1,11 +1,9 @@
 import { create } from 'zustand';
-import type { AuthState } from './slices/authSlice';
-import { createAuthSlice } from './slices/authSlice';
+import type { AppState } from './slices/appSlice';
+import { createAppSlice } from './slices/appSlice';
 
-// Combine all state types
-export type StoreState = AuthState;
+export type StoreState = AppState;
 
-// Create the store with all slices
-export const useStore = create<AuthState>()((...a) => ({
-  ...createAuthSlice(...a),
+export const useStore = create<StoreState>()((...a) => ({
+  ...createAppSlice(...a),
 }));

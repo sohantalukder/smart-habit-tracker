@@ -7,6 +7,7 @@ if (document.openapi !== "3.1.0") {
   throw new Error("OpenAPI document must use version 3.1.0.");
 }
 const requiredPaths = [
+  "/",
   "/admin/session",
   "/admin/users/{userId}/details",
   "/admin/users/{userId}/profile",

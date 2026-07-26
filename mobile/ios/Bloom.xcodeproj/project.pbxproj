@@ -12,6 +12,12 @@
 		41938F057911513FF9CDF6FC /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB81A68108700A75B9A /* PrivacyInfo.xcprivacy */; };
 		761780ED2CA45674006654EE /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 761780EC2CA45674006654EE /* AppDelegate.swift */; };
 		81AB9BB82411601600AC10FF /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */; };
+		2BE7F505128B4FDD9B5C2E61 /* Manrope_400Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 1BD7AC3AB122454080B75F89 /* Manrope_400Regular.ttf */; };
+		41A2A2DF23E74C11B266B4B9 /* Manrope_600SemiBold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = DF213F41DBE543EBB8762297 /* Manrope_600SemiBold.ttf */; };
+		9DB56BC5E3C44140A35804A6 /* Manrope_500Medium.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 7243D35EC1BE4F9BAADC79F5 /* Manrope_500Medium.ttf */; };
+		FEDAAFA336EF41EAAAF5D2D1 /* Manrope_700Bold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = D9976023BEAF4A9C8CD2988D /* Manrope_700Bold.ttf */; };
+		98542EBA8C6F4C1BA6D3B4E6 /* Newsreader_500Medium_Italic.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 129468D93E804F40A293FC7B /* Newsreader_500Medium_Italic.ttf */; };
+		0286E707FD934C2C9A3637DA /* Newsreader_500Medium.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 9BCECE661AE14E1E98302230 /* Newsreader_500Medium.ttf */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -25,6 +31,12 @@
 		761780EC2CA45674006654EE /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppDelegate.swift; path = Bloom/AppDelegate.swift; sourceTree = "<group>"; };
 		81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = LaunchScreen.storyboard; path = Bloom/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		ED297162215061F000B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
+		1BD7AC3AB122454080B75F89 /* Manrope_400Regular.ttf */ = {isa = PBXFileReference; name = "Manrope_400Regular.ttf"; path = "../assets/fonts/Manrope_400Regular.ttf"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
+		DF213F41DBE543EBB8762297 /* Manrope_600SemiBold.ttf */ = {isa = PBXFileReference; name = "Manrope_600SemiBold.ttf"; path = "../assets/fonts/Manrope_600SemiBold.ttf"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
+		7243D35EC1BE4F9BAADC79F5 /* Manrope_500Medium.ttf */ = {isa = PBXFileReference; name = "Manrope_500Medium.ttf"; path = "../assets/fonts/Manrope_500Medium.ttf"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
+		D9976023BEAF4A9C8CD2988D /* Manrope_700Bold.ttf */ = {isa = PBXFileReference; name = "Manrope_700Bold.ttf"; path = "../assets/fonts/Manrope_700Bold.ttf"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
+		129468D93E804F40A293FC7B /* Newsreader_500Medium_Italic.ttf */ = {isa = PBXFileReference; name = "Newsreader_500Medium_Italic.ttf"; path = "../assets/fonts/Newsreader_500Medium_Italic.ttf"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
+		9BCECE661AE14E1E98302230 /* Newsreader_500Medium.ttf */ = {isa = PBXFileReference; name = "Newsreader_500Medium.ttf"; path = "../assets/fonts/Newsreader_500Medium.ttf"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -75,6 +87,7 @@
 				83CBBA001A601CBA00E9B192 /* Products */,
 				2D16E6871FA4F8E400B85C8A /* Frameworks */,
 				BBD78D7AC51CEA395F1C20DB /* Pods */,
+				086E5DF226234D70AADFE4BB /* Resources */,
 			);
 			indentWidth = 2;
 			sourceTree = "<group>";
@@ -97,6 +110,20 @@
 			);
 			path = Pods;
 			sourceTree = "<group>";
+		};
+		086E5DF226234D70AADFE4BB /* Resources */ = {
+			isa = "PBXGroup";
+			children = (
+				1BD7AC3AB122454080B75F89 /* Manrope_400Regular.ttf */,
+				DF213F41DBE543EBB8762297 /* Manrope_600SemiBold.ttf */,
+				7243D35EC1BE4F9BAADC79F5 /* Manrope_500Medium.ttf */,
+				D9976023BEAF4A9C8CD2988D /* Manrope_700Bold.ttf */,
+				129468D93E804F40A293FC7B /* Newsreader_500Medium_Italic.ttf */,
+				9BCECE661AE14E1E98302230 /* Newsreader_500Medium.ttf */,
+			);
+			name = Resources;
+			sourceTree = "<group>";
+			path = "";
 		};
 /* End PBXGroup section */
 
@@ -162,6 +189,12 @@
 				81AB9BB82411601600AC10FF /* LaunchScreen.storyboard in Resources */,
 				13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */,
 				41938F057911513FF9CDF6FC /* PrivacyInfo.xcprivacy in Resources */,
+				2BE7F505128B4FDD9B5C2E61 /* Manrope_400Regular.ttf in Resources */,
+				41A2A2DF23E74C11B266B4B9 /* Manrope_600SemiBold.ttf in Resources */,
+				9DB56BC5E3C44140A35804A6 /* Manrope_500Medium.ttf in Resources */,
+				FEDAAFA336EF41EAAAF5D2D1 /* Manrope_700Bold.ttf in Resources */,
+				98542EBA8C6F4C1BA6D3B4E6 /* Newsreader_500Medium_Italic.ttf in Resources */,
+				0286E707FD934C2C9A3637DA /* Newsreader_500Medium.ttf in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

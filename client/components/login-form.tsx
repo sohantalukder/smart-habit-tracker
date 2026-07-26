@@ -1,12 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowLeft, CheckCircle2, LoaderCircle, LockKeyhole, Sprout } from "lucide-react";
+import { ArrowLeft, CheckCircle2, LoaderCircle, LockKeyhole } from "lucide-react";
 import { useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { AuthMode } from "@/lib/auth-navigation";
+import { BloomMark } from "@/components/bloom-mark";
 
 export function LoginForm({
   returnTo,
@@ -162,7 +163,7 @@ export function LoginForm({
       <section className="auth-story">
         <Link href="/"><ArrowLeft size={17} /> Back to Bloom</Link>
         <div>
-          <span><Sprout size={25} /></span>
+          <span><BloomMark /></span>
           <p>PRIVATE PRACTICE · HONEST RECORD</p>
           <blockquote>Build a life that keeps its word.</blockquote>
           <small>Structure for the promises that deserve a place in your day.</small>

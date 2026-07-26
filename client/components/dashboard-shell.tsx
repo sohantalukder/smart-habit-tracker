@@ -16,9 +16,9 @@ import {
   LogOut,
   Menu,
   Settings,
-  Sprout,
   UserRound,
 } from "lucide-react";
+import { BloomMark } from "@/components/bloom-mark";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -135,7 +135,7 @@ export function DashboardShell({
       <main className="bloom-app">
         <header className="app-topbar">
           <Link href="/dashboard" className="bloom-brand" aria-label="Bloom dashboard">
-            <span><Sprout size={21} /></span><strong>Bloom</strong>
+            <span><BloomMark /></span><strong>Bloom</strong>
           </Link>
           <div className="app-account">
             <Link className="account-notifications" href="/dashboard/inbox" aria-label={`${notifications.length} inbox items`}>

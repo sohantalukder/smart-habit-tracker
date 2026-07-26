@@ -18,9 +18,11 @@ import { ProfileController } from "./profile/profile.controller";
 import { AvatarStorageService } from "./profile/avatar-storage.service";
 import { SyncController } from "./sync/sync.controller";
 import { SyncService } from "./sync/sync.service";
+import { ApiController } from "./api.controller";
 
 @Module({
   controllers: [
+    ApiController,
     HealthController,
     OpenApiController,
     AuthController,

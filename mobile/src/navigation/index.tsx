@@ -1,3 +1,4 @@
+/* eslint-disable react-native/no-raw-text */
 import { useEffect } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import {
@@ -6,7 +7,7 @@ import {
 } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createStackNavigator } from '@react-navigation/stack';
-import { Text, useTheme } from '@sohantalukder/rn-kit';
+import { useTheme } from '@sohantalukder/rn-kit';
 import { useApp } from '@/app/AppProvider';
 import { setPushRouteHandler } from '@/push/pushService';
 import { AuthScreen } from '@/screens/AuthScreen';
@@ -21,6 +22,8 @@ import { SecurityScreen } from '@/screens/SecurityScreen';
 import { SettingsScreen } from '@/screens/SettingsScreen';
 import { TodayScreen } from '@/screens/TodayScreen';
 import type { MainTabParamList, RootStackParamList } from './types';
+import { BloomText } from '@/components/BloomText';
+import { bloomColors, bloomFonts } from '@/theme/bloomTheme';
 
 const Stack = createStackNavigator<RootStackParamList>();
 const Tabs = createBottomTabNavigator<MainTabParamList>();
@@ -48,8 +51,14 @@ function MainTabs() {
           paddingBottom: 7,
           backgroundColor: colors.background,
         },
+        tabBarLabelStyle: {
+          fontFamily: bloomFonts.bodySemibold,
+          fontSize: 11,
+        },
         tabBarIcon: ({ color }) => (
-          <Text style={tabIconStyle(color)}>{tabIcons[route.name]}</Text>
+          <BloomText style={tabIconStyle(color)}>
+            {tabIcons[route.name]}
+          </BloomText>
         ),
       })}
     >
@@ -99,7 +108,9 @@ export default function Navigation() {
           color={colors.primary}
           size="large"
         />
-        <Text color="secondary">Opening your encrypted Bloom…</Text>
+        <BloomText style={styles.loadingText}>
+          Opening your encrypted Bloom…
+        </BloomText>
       </View>
     );
   }
@@ -156,5 +167,6 @@ const styles = StyleSheet.create({
     gap: 12,
     justifyContent: 'center',
   },
+  loadingText: { color: bloomColors.muted },
   tabIcon: { fontSize: 18 },
 });

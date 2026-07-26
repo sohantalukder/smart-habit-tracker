@@ -3,16 +3,16 @@ import { createHabit } from '../src/database/repository';
 import packageJson from '../package.json';
 
 jest.mock('uuid', () => ({
-  v4: jest.fn()
+  v4: jest
+    .fn()
     .mockReturnValueOnce('4245f96d-1a2b-4f3c-9d5e-112233445566')
     .mockReturnValueOnce('5245f96d-1a2b-4f3c-9d5e-112233445566'),
 }));
 
 const mockExecute = jest.fn().mockResolvedValue({ rows: [], rowsAffected: 1 });
-const mockTransaction = jest.fn(async (
-  work: (tx: { execute: typeof mockExecute }) => Promise<void>
-) =>
-  work({ execute: mockExecute })
+const mockTransaction = jest.fn(
+  async (work: (tx: { execute: typeof mockExecute }) => Promise<void>) =>
+    work({ execute: mockExecute })
 );
 
 jest.mock('../src/database/database', () => ({
@@ -28,7 +28,10 @@ describe('Bloom offline database', () => {
   });
 
   it('defines every normalized offline table and the durable outbox', () => {
-    const sql = schema.map(command => command[0]).join('\n').toLowerCase();
+    const sql = schema
+      .map((command) => command[0])
+      .join('\n')
+      .toLowerCase();
     for (const table of [
       'profile',
       'preferences',
@@ -70,7 +73,9 @@ describe('Bloom offline database', () => {
     expect(mockTransaction).toHaveBeenCalledTimes(1);
     expect(mockExecute).toHaveBeenCalledTimes(2);
     expect(mockExecute.mock.calls[0]?.[0]).toContain('insert into habits');
-    expect(mockExecute.mock.calls[1]?.[0]).toContain('insert into mutation_outbox');
+    expect(mockExecute.mock.calls[1]?.[0]).toContain(
+      'insert into mutation_outbox'
+    );
     expect(mockExecute.mock.calls[1]?.[1]).toEqual(
       expect.arrayContaining(['habit', '4245f96d-1a2b-4f3c-9d5e-112233445566'])
     );

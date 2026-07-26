@@ -24,6 +24,7 @@ import {
   Users,
   X,
 } from "lucide-react";
+import { BloomMark } from "@/components/bloom-mark";
 import { Badge } from "@/components/ui/badge";
 import { AdminTemplateEditor } from "@/components/admin-template-editor";
 import { AdminUserEditor } from "@/components/admin-user-editor";
@@ -125,7 +126,7 @@ export function AdminPortal({ support }: { support: SupportSession }) {
   return <div className="admin-shell">
     <aside className={sidebar ? "open" : ""} aria-label="Admin navigation">
       <button type="button" className="admin-close" onClick={() => setSidebar(false)} aria-label="Close navigation"><X size={19}/></button>
-      <div className="admin-brand"><span><Sprout size={20}/></span><div><strong>Bloom</strong><small>ADMIN PORTAL</small></div></div>
+      <div className="admin-brand"><span><BloomMark /></span><div><strong>Bloom</strong><small>ADMIN PORTAL</small></div></div>
       <nav aria-label="Admin sections">{nav.map((item) => { const Icon = item.icon; return <button type="button" key={item.id} aria-current={page === item.id ? "page" : undefined} className={page === item.id ? "active" : ""} onClick={() => { setPage(item.id); setSidebar(false); window.history.replaceState(null, "", `/admin?section=${item.id}`); }}><Icon size={18}/><span>{item.label}</span></button>; })}</nav>
       <div className="support-profile"><span>{initials(support.name)}</span><div><strong>{support.name || support.email}</strong><small>{accessLabel} · {canManage ? "Full management" : "Read and restrict"}</small></div></div>
     </aside>

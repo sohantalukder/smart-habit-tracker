@@ -7,8 +7,15 @@ Tracker. It is an independent React Native repository based on
 - Display name: `Bloom`
 - Bundle/application ID: `com.sohantalukder.bloom`
 - UI: `@sohantalukder/rn-kit` with `ThemeProvider` and `UiPortalProvider`
+- State: Zustand slices for application/session/sync state
+- Server state: TanStack Query for online authentication and security calls
 - Local source of truth: OP-SQLite with SQLCipher
 - Navigation: Today, Habits, History, Inbox, and More
+
+Bloom uses the same forest, ivory, brass, Manrope, Newsreader, and leaf-mark
+identity as the web client. The web favicon at `../client/public/icon.svg` is
+the source of truth for the in-app mark, Android launcher icon, iOS app icon,
+and both native splash screens.
 
 ## Offline behavior
 
@@ -40,6 +47,9 @@ Copy `.env.example` to `.env` and set `BLOOM_API_URL`. Development defaults are:
 - iOS simulator: `http://localhost:4000/v1`
 - Android emulator: `http://10.0.2.2:4000/v1`
 
+`GET http://localhost:4000/v1` describes the running API. Health and dependency
+readiness are available at `/v1/health` and `/v1/health/ready`.
+
 For an Android physical device connected over USB:
 
 ```bash
@@ -70,6 +80,14 @@ Generate mobile API types after changing the server OpenAPI document:
 
 ```bash
 npm run api:generate
+```
+
+Regenerate native branding and synchronize the checked-in font assets after
+changing the web logo or font packages:
+
+```bash
+npm run brand:generate
+npm run fonts:sync
 ```
 
 ## Data lifecycle

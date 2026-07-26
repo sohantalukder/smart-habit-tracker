@@ -62,5 +62,14 @@
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<false/>
+	<key>UIAppFonts</key>
+	<array>
+		<string>Manrope_400Regular.ttf</string>
+		<string>Manrope_600SemiBold.ttf</string>
+		<string>Manrope_500Medium.ttf</string>
+		<string>Manrope_700Bold.ttf</string>
+		<string>Newsreader_500Medium_Italic.ttf</string>
+		<string>Newsreader_500Medium.ttf</string>
+	</array>
 </dict>
 </plist>

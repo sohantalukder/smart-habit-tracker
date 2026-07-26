@@ -1,5 +1,5 @@
 import { StyleSheet, View } from 'react-native';
-import { Badge, Text } from '@sohantalukder/rn-kit';
+import { Badge } from '@sohantalukder/rn-kit';
 import { useApp } from '@/app/AppProvider';
 
 const labels = {
@@ -28,14 +28,6 @@ export function SyncBanner() {
         }
         textColor={syncState === 'needs_attention' ? '#991B1B' : '#365314'}
       />
-      {syncState === 'offline' && (
-        <Text
-          variant="body3"
-          color="secondary"
-        >
-          Changes stay safely on this device.
-        </Text>
-      )}
     </View>
   );
 }
@@ -46,7 +38,5 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 8,
     minHeight: 28,
-    paddingHorizontal: 18,
-    paddingTop: 8,
   },
 });

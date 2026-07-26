@@ -12,8 +12,8 @@ import {
   Layers3,
   LineChart,
   MoonStar,
-  Sprout,
 } from "lucide-react";
+import { BloomMark } from "@/components/bloom-mark";
 
 const features = [
   {
@@ -71,7 +71,7 @@ export function LandingPage() {
     <main className="landing">
       <header className="landing-header">
         <Link href="/" className="bloom-brand" aria-label="Bloom home">
-          <span><Sprout size={22} /></span>
+          <span><BloomMark /></span>
           <strong>Bloom</strong>
         </Link>
         <nav aria-label="Primary navigation">
@@ -187,7 +187,7 @@ export function LandingPage() {
       </section>
 
       <section className="landing-cta">
-        <Sprout size={30} />
+        <BloomMark className="landing-cta-mark" />
         <p>FOR PEOPLE WHO TREAT DISCIPLINE AS SELF-RESPECT</p>
         <h2>Begin with one promise<br />you intend to keep.</h2>
         <Link href="/login?mode=signup&returnTo=%2Fdashboard" className="landing-button landing-button--light">
@@ -196,7 +196,7 @@ export function LandingPage() {
       </section>
 
       <footer className="landing-footer">
-        <Link href="/" className="bloom-brand"><span><Sprout size={20} /></span><strong>Bloom</strong></Link>
+        <Link href="/" className="bloom-brand"><span><BloomMark /></span><strong>Bloom</strong></Link>
         <p>Private habits. Honest records. A stronger daily life.</p>
         <Link href="/login?returnTo=%2Fdashboard">Sign in</Link>
       </footer>

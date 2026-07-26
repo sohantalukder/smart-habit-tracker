@@ -69,6 +69,12 @@ textarea {
   letter-spacing: -0.04em;
 }
 
+.bloom-mark {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
 /* Public landing */
 .landing {
   min-height: 100vh;
@@ -527,6 +533,7 @@ textarea {
 }
 
 .landing-cta > svg { margin-bottom: 24px; color: #f1c875; }
+.landing-cta > .landing-cta-mark { width: 54px; height: 54px; margin-bottom: 24px; }
 .landing-cta > p { color: #cbd8d1; }
 .landing-cta h2 { max-width: 900px; color: white; }
 .landing-button--light { margin-top: 40px; border-color: var(--ledger-paper); background: var(--ledger-paper); color: var(--ledger-forest); }

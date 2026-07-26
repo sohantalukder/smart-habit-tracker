@@ -20,6 +20,8 @@
     "lint:type-check": "tsc --noEmit",
     "typecheck": "tsc --noEmit",
     "api:generate": "openapi-typescript openapi/openapi.json -o src/api/generated.ts && prettier --write src/api/generated.ts",
+    "brand:generate": "node scripts/generate-brand-assets.mjs",
+    "fonts:sync": "node scripts/sync-font-assets.mjs && react-native-asset",
     "lint": "npm run lint:rules && npm run lint:code-format && npm run lint:type-check",
     "lint:fix": "npm run lint:rules -- --fix && npm run lint:code-format -- --write && npm run lint:type-check",
     "test:report": "jest --collectCoverage --coverageDirectory=\"./coverage\" --ci --reporters=default --reporters=jest-junit --coverage",
@@ -28,6 +30,8 @@
   },
   "dependencies": {
     "@d11/react-native-fast-image": "^8.6.3",
+    "@expo-google-fonts/manrope": "^0.4.2",
+    "@expo-google-fonts/newsreader": "^0.4.1",
     "@gorhom/bottom-sheet": "^5.2.6",
     "@op-engineering/op-sqlite": "17.1.2",
     "@react-native-clipboard/clipboard": "^1.15.0",
@@ -109,8 +113,10 @@
     "lint-staged": "^16.0.0",
     "openapi-typescript": "7.9.1",
     "prettier": "^3.4.2",
+    "react-native-asset": "^2.3.0",
     "react-native-svg-transformer": "^1.5.1",
     "react-test-renderer": "19.1.0",
+    "sharp": "^0.34.3",
     "typescript": "5.9.3"
   },
   "op-sqlite": {

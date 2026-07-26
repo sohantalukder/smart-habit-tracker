@@ -14,6 +14,10 @@ import '@/config/i18n.config';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import localStore from '@/services/storage/localStore.service';
 import logo from '@/assets/images/logo.png';
+import { bloomTheme } from '@/theme/bloomTheme';
+import { configureBloomTypography } from '@/theme/configureTypography';
+
+configureBloomTypography();
 
 const styles = StyleSheet.create({
   root: {
@@ -44,6 +48,7 @@ const MainIndex = () => {
           <ThemeProvider
             logo={logo}
             storageAdapter={themeStorageAdapter}
+            theme={bloomTheme}
           >
             <UiPortalProvider>
               <AppProvider>

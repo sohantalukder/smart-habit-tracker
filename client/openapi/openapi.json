@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Bloom Smart Habit REST API",
-    "version": "1.4.0",
+    "version": "1.4.1",
     "description": "Versioned API contract for web and native mobile clients."
   },
   "servers": [
@@ -16,6 +16,24 @@
     }
   ],
   "paths": {
+    "/": {
+      "get": {
+        "operationId": "getApiRoot",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "The Bloom API is running and exposes its diagnostic links.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiRoot"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/health/live": {
       "get": {
         "operationId": "getLiveness",
@@ -1841,6 +1859,48 @@
       }
     },
     "schemas": {
+      "ApiRoot": {
+        "type": "object",
+        "required": [
+          "status",
+          "service",
+          "version",
+          "links"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "ok"
+          },
+          "service": {
+            "type": "string",
+            "const": "bloom-api"
+          },
+          "version": {
+            "type": "string",
+            "const": "v1"
+          },
+          "links": {
+            "type": "object",
+            "required": [
+              "health",
+              "readiness",
+              "openapi"
+            ],
+            "properties": {
+              "health": {
+                "type": "string"
+              },
+              "readiness": {
+                "type": "string"
+              },
+              "openapi": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
       "Liveness": {
         "type": "object",
         "required": [
