@@ -142,7 +142,7 @@ export function AdminPortal({ support }: { support: SupportSession }) {
         />
         {error && <div className="admin-error"><ShieldCheck size={17}/><span>{error}</span><button onClick={() => void adminQuery.refetch()}>Try again</button></div>}
         {loading ? <LoadingPanel/> : <>
-          {page === "overview" && <Overview analytics={analytics} onNavigate={setPage}/>}
+          {page === "overview" && <Overview analytics={analytics}/>}
           {page === "users" && <UsersPanel users={filteredUsers} query={query} setQuery={(value) => { setQuery(value); setUserPage(1); }} refresh={() => void adminQuery.refetch()} support={support} canManage={canManage} count={userResult.count} page={userResult.page} pageSize={userResult.pageSize} setPage={setUserPage}/>}
           {page === "templates" && <TemplatesPanel templates={templates} canManage={canManage}/>}
           {page === "notifications" && <NotificationsPanel rows={deliveries} canManage={canManage}/>}
@@ -176,16 +176,13 @@ function AdminHeading({ eyebrow, title, copy, action }: { eyebrow: string; title
   return <section className="admin-heading"><div><p>{eyebrow}</p><h1>{title}</h1><small>{copy}</small></div>{action}</section>;
 }
 
-function Overview({ analytics }: { analytics: AdminAnalytics; onNavigate: (page: AdminPage) => void }) {
+function Overview({ analytics }: { analytics: AdminAnalytics }) {
   const stats = [
     ["Total users", analytics.users, Users, "green"],
     ["Active habits", analytics.activeHabits, Activity, "amber"],
     ["Delivered", analytics.deliveredNotifications, Send, "blue"],
   ] as const;
-  return <>
-    <div className="admin-stats">{stats.map(([label,value,Icon,tone]) => <Card key={label}><span className={`stat-mark ${tone}`}><Icon size={19}/></span><div><p>{label}</p><h2>{value}</h2><small>Live workspace summary</small></div></Card>)}</div>
-    <Card className="admin-callout"><ShieldCheck size={21}/><div><strong>Support-only workspace</strong><p>Every page and REST request re-checks your exact support membership. All mutations are audited.</p></div></Card>
-  </>;
+  return <div className="admin-stats">{stats.map(([label,value,Icon,tone]) => <Card key={label}><span className={`stat-mark ${tone}`}><Icon size={19}/></span><div><p>{label}</p><h2>{value}</h2><small>Live workspace summary</small></div></Card>)}</div>;
 }
 
 function UsersPanel({ users, query, setQuery, refresh, support, canManage, count, page, pageSize, setPage }: { users: AdminUser[]; query: string; setQuery: (value: string) => void; refresh: () => void; support: SupportSession; canManage: boolean; count: number; page: number; pageSize: number; setPage: (page: number) => void }) {
