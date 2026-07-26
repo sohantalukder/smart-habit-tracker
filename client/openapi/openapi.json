@@ -1060,6 +1060,34 @@
         }
       }
     },
+    "/admin/users/{userId}/role": {
+      "patch": {
+        "operationId": "adminUpdateUserRole",
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          },
+          { "$ref": "#/components/parameters/IdempotencyKey" }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/AdminRoleUpdateInput" }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Updated administrator role." },
+          "400": { "$ref": "#/components/responses/Error" },
+          "403": { "$ref": "#/components/responses/Error" },
+          "409": { "$ref": "#/components/responses/Error" }
+        }
+      }
+    },
     "/admin/users/{userId}/prayer-settings": {
       "patch": {
         "operationId": "adminUpdateUserPrayerSettings",
@@ -1919,6 +1947,16 @@
           "newPassword": { "type": "string", "minLength": 8, "maxLength": 128 },
           "confirmation": { "type": "string", "minLength": 8, "maxLength": 128 },
           "adminPassword": { "type": "string", "minLength": 1, "maxLength": 128 }
+        }
+      },
+      "AdminRoleUpdateInput": {
+        "type": "object",
+        "required": ["role"],
+        "properties": {
+          "role": {
+            "type": ["string", "null"],
+            "enum": ["support", "super_admin", null]
+          }
         }
       },
       "AdminPrayerSettingsInput": {

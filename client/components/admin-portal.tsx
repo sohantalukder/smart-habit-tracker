@@ -207,11 +207,42 @@ function UsersPanel({ users, query, setQuery, refresh, support, canManage, count
       setActionError(reason instanceof Error ? reason.message : "The account status could not be changed.");
     },
   });
+  const roleMutation = useMutation({
+    mutationFn: ({ user, role }: {
+      user: AdminUser;
+      role: "support" | "super_admin" | null;
+    }) => apiRequest(
+      `/admin/users/${user.id}/role`,
+      idempotentInit("PATCH", { role }),
+    ),
+    onSuccess: async () => {
+      setActionError("");
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: queryKeys.admin.usersRoot }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.admin.audit }),
+      ]);
+    },
+    onError: (reason) => {
+      setActionError(reason instanceof Error ? reason.message : "The user role could not be changed.");
+    },
+  });
   function toggle(user: AdminUser) {
     if (toggleMutation.isPending) return;
     const action = user.suspended_at ? "reactivation" : "restriction";
     const reason = window.prompt(`Enter a reason for this ${action}:`)?.trim();
     if (reason && reason.length >= 3) toggleMutation.mutate({ user, reason });
+  }
+  function changeRole(user: AdminUser, value: string) {
+    if (roleMutation.isPending) return;
+    const role = value === "support" || value === "super_admin" ? value : null;
+    const label = role === "super_admin"
+      ? "Super admin"
+      : role === "support"
+        ? "Support"
+        : "Standard user";
+    if (window.confirm(`Change ${user.name || user.email} to ${label}?`)) {
+      roleMutation.mutate({ user, role });
+    }
   }
   const totalPages = adminPageCount(count, pageSize);
   return <>
@@ -227,7 +258,21 @@ function UsersPanel({ users, query, setQuery, refresh, support, canManage, count
             <thead><tr><th>USER</th><th>ROLE</th><th>TIMEZONE</th><th>JOINED</th><th>STATUS</th><th>ACTIONS</th></tr></thead>
             <tbody>{users.map((user) => <tr key={user.id}>
               <td><span className="table-avatar">{initials(user.name)}</span><div><strong>{user.name || "Unnamed user"}</strong><small>{user.email}</small></div></td>
-              <td>{user.role?.replace("_", " ") ?? "Member"}</td>
+              <td>
+                {canManage ? (
+                  <select
+                    className="admin-role-select"
+                    value={user.role === "support" || user.role === "super_admin" ? user.role : ""}
+                    disabled={roleMutation.isPending || user.id === support.userId}
+                    onChange={(event) => changeRole(user, event.target.value)}
+                    aria-label={`Role for ${user.name || user.email}`}
+                  >
+                    <option value="">Standard user</option>
+                    <option value="support">Support</option>
+                    <option value="super_admin">Super admin</option>
+                  </select>
+                ) : user.role?.replace("_", " ") ?? "Standard user"}
+              </td>
               <td>{user.timezone}</td>
               <td>{new Date(user.created_at).toLocaleDateString()}</td>
               <td><Badge tone={user.suspended_at ? "danger" : "success"}>{user.suspended_at ? "Suspended" : "Active"}</Badge></td>

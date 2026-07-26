@@ -201,6 +201,9 @@ export const adminUserUpdateSchema = z.object({
   dailyDigestEnabled: z.boolean(),
   role: z.enum(["support", "super_admin"]).nullable(),
 });
+export const adminRoleUpdateSchema = z.object({
+  role: z.enum(["support", "super_admin"]).nullable(),
+});
 export const adminRestrictionSchema = z.object({
   suspended: z.boolean(),
   reason: z.string().trim().min(3).max(500),
@@ -305,6 +308,7 @@ export type PrayerName = z.infer<typeof prayerNameSchema>;
 export type PrayerCalculationMethod = z.infer<typeof prayerCalculationMethodSchema>;
 export type Madhab = z.infer<typeof madhabSchema>;
 export type AdminUserUpdateInput = z.infer<typeof adminUserUpdateSchema>;
+export type AdminRoleUpdateInput = z.infer<typeof adminRoleUpdateSchema>;
 export type AdminRestrictionInput = z.infer<typeof adminRestrictionSchema>;
 export type AdminPasswordChangeInput = z.infer<typeof adminPasswordChangeSchema>;
 export type AdminHabitUpdateInput = z.infer<typeof adminHabitUpdateSchema>;

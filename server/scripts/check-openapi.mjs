@@ -10,6 +10,7 @@ const requiredPaths = [
   "/admin/session",
   "/admin/users/{userId}/details",
   "/admin/users/{userId}/profile",
+  "/admin/users/{userId}/role",
   "/admin/users/{userId}/prayer-settings",
   "/admin/users/{userId}/password",
   "/admin/users/{userId}/habits/{habitId}",

@@ -23,6 +23,7 @@ import {
   adminPrayerLogSchema,
   adminPrayerReminderSchema,
   adminPrayerSettingsSchema,
+  adminRoleUpdateSchema,
   adminRestrictionSchema,
   adminTemplateUpdateSchema,
   adminUserUpdateSchema,
@@ -384,6 +385,46 @@ export class AdminController {
         ]);
       }
       return updated;
+    });
+  }
+
+  @Patch("users/:id/role")
+  @Header("Cache-Control", "private, no-store, max-age=0")
+  async updateUserRole(
+    @Req() request: AuthenticatedRequest,
+    @Param("id") id: string,
+    @Body() body: unknown,
+  ) {
+    const support = await requireSuperAdmin(request, this.database);
+    const parsed = adminRoleUpdateSchema.safeParse(body);
+    if (!parsed.success) throw new BadRequestException(parsed.error.issues);
+    return this.idempotent(request, `PATCH:/admin/users/${id}/role`, async () => {
+      const previousRole = await this.assertCanAssignRole(support, id, parsed.data.role);
+      if (parsed.data.role) {
+        await this.database.query(
+          `insert into admin_memberships (user_id, role, created_by)
+           values ($1, $2::admin_role, $3)
+           on conflict (user_id) do update set role = excluded.role`,
+          [id, parsed.data.role, support.userId],
+        );
+      } else {
+        await this.database.query(
+          "delete from admin_memberships where user_id = $1",
+          [id],
+        );
+      }
+      await this.audit.record({
+        actorId: support.userId,
+        action: "user.role_updated",
+        targetType: "admin_membership",
+        targetId: id,
+        correlationId: request.correlationId,
+        metadata: {
+          previousRole,
+          nextRole: parsed.data.role,
+        },
+      });
+      return { id, role: parsed.data.role };
     });
   }
 
@@ -1398,6 +1439,7 @@ export class AdminController {
         throw new ConflictException("The last active super admin cannot be demoted.");
       }
     }
+    return current.rows[0].role;
   }
 
   private async idempotent<T>(
