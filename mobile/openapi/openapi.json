@@ -1,0 +1,3613 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Bloom Smart Habit REST API",
+    "version": "1.4.0",
+    "description": "Versioned API contract for web and native mobile clients."
+  },
+  "servers": [
+    {
+      "url": "/v1"
+    }
+  ],
+  "security": [
+    {
+      "bearerAuth": []
+    }
+  ],
+  "paths": {
+    "/health/live": {
+      "get": {
+        "operationId": "getLiveness",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "The API process is running.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Liveness"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health/ready": {
+      "get": {
+        "operationId": "getReadiness",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Required dependencies are ready.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Readiness"
+                }
+              }
+            }
+          },
+          "503": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/auth/signup": {
+      "post": {
+        "operationId": "signup",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SignupInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Verification email requested.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VerificationRequired"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "429": {
+            "$ref": "#/components/responses/Error"
+          },
+          "503": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/auth/resend-verification": {
+      "post": {
+        "operationId": "resendVerification",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EmailInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Verification email requested.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VerificationRequired"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "429": {
+            "$ref": "#/components/responses/Error"
+          },
+          "503": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/auth/verify-email": {
+      "post": {
+        "operationId": "verifyEmail",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VerificationInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Email verified and session created.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthSession"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "429": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/auth/login": {
+      "post": {
+        "operationId": "login",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Authenticated session.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthSession"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "429": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/auth/me": {
+      "get": {
+        "operationId": "getAuthSession",
+        "responses": {
+          "200": {
+            "description": "Current authenticated user.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "user"
+                  ],
+                  "properties": {
+                    "user": {
+                      "$ref": "#/components/schemas/AuthUser"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/auth/logout": {
+      "post": {
+        "operationId": "logout",
+        "responses": {
+          "200": {
+            "description": "Current session revoked.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "loggedOut"
+                  ],
+                  "properties": {
+                    "loggedOut": {
+                      "type": "boolean",
+                      "const": true
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/auth/restore-account": {
+      "post": {
+        "operationId": "restoreAccount",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/LoginInput" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Account restored and a new session created.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/AuthSession" }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Error" },
+          "429": { "$ref": "#/components/responses/Error" }
+        }
+      }
+    },
+    "/auth/change-password": {
+      "post": {
+        "operationId": "changePassword",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/PasswordChangeInput" }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Password changed." },
+          "400": { "$ref": "#/components/responses/Error" },
+          "401": { "$ref": "#/components/responses/Error" },
+          "429": { "$ref": "#/components/responses/Error" }
+        }
+      }
+    },
+    "/auth/request-email-change": {
+      "post": {
+        "operationId": "requestEmailChange",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/EmailChangeInput" }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "New email verification requested.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/EmailChangePending" }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/Error" },
+          "401": { "$ref": "#/components/responses/Error" },
+          "409": { "$ref": "#/components/responses/Error" },
+          "429": { "$ref": "#/components/responses/Error" }
+        }
+      }
+    },
+    "/auth/verify-email-change": {
+      "post": {
+        "operationId": "verifyEmailChange",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/EmailChangeVerificationInput" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Email changed and a new session created.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/AuthSession" }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/Error" },
+          "409": { "$ref": "#/components/responses/Error" },
+          "429": { "$ref": "#/components/responses/Error" }
+        }
+      }
+    },
+    "/auth/sign-out-others": {
+      "post": {
+        "operationId": "signOutOtherSessions",
+        "responses": {
+          "200": { "description": "Other sessions revoked." },
+          "401": { "$ref": "#/components/responses/Error" }
+        }
+      }
+    },
+    "/auth/sessions": {
+      "get": {
+        "operationId": "listAuthSessions",
+        "responses": {
+          "200": {
+            "description": "Active sessions for the current user.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/ActiveSession" }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Error" }
+        }
+      }
+    },
+    "/auth/delete-account": {
+      "post": {
+        "operationId": "deleteAccount",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/DeleteAccountInput" }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Account scheduled for deletion." },
+          "400": { "$ref": "#/components/responses/Error" },
+          "401": { "$ref": "#/components/responses/Error" },
+          "429": { "$ref": "#/components/responses/Error" }
+        }
+      }
+    },
+    "/profile": {
+      "get": {
+        "operationId": "getProfile",
+        "responses": {
+          "200": {
+            "description": "Authenticated user profile.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Profile"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      },
+      "patch": {
+        "operationId": "updateProfile",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ProfileUpdateInput" }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Profile updated." },
+          "400": { "$ref": "#/components/responses/Error" },
+          "401": { "$ref": "#/components/responses/Error" }
+        }
+      }
+    },
+    "/profile/avatar": {
+      "get": {
+        "operationId": "getProfileAvatar",
+        "responses": {
+          "200": {
+            "description": "Private normalized profile photo.",
+            "content": {
+              "image/webp": {
+                "schema": { "type": "string", "format": "binary" }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Error" },
+          "404": { "$ref": "#/components/responses/Error" }
+        }
+      },
+      "put": {
+        "operationId": "uploadProfileAvatar",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": ["file"],
+                "properties": {
+                  "file": { "type": "string", "format": "binary" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Profile photo updated." },
+          "400": { "$ref": "#/components/responses/Error" },
+          "401": { "$ref": "#/components/responses/Error" },
+          "413": { "$ref": "#/components/responses/Error" },
+          "503": { "$ref": "#/components/responses/Error" }
+        }
+      },
+      "delete": {
+        "operationId": "deleteProfileAvatar",
+        "responses": {
+          "200": { "description": "Profile photo removed." },
+          "401": { "$ref": "#/components/responses/Error" },
+          "503": { "$ref": "#/components/responses/Error" }
+        }
+      }
+    },
+    "/onboarding": {
+      "post": {
+        "operationId": "completeOnboarding",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OnboardingInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Onboarding completed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "completed"
+                  ],
+                  "properties": {
+                    "completed": {
+                      "type": "boolean",
+                      "const": true
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/habit-templates": {
+      "get": {
+        "operationId": "listHabitTemplates",
+        "responses": {
+          "200": {
+            "description": "Active templates.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/HabitTemplate"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/habits": {
+      "get": {
+        "operationId": "listHabits",
+        "responses": {
+          "200": {
+            "description": "Current user's habits.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Habit"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "createHabit",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateHabitInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created habit.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Habit"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/today": {
+      "get": {
+        "operationId": "getToday",
+        "parameters": [
+          {
+            "name": "date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Habits due for the selected local date.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "allOf": [
+                      {
+                        "$ref": "#/components/schemas/Habit"
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "todayLog": {
+                            "anyOf": [
+                              {
+                                "$ref": "#/components/schemas/HabitLog"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          }
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/habits/{habitId}/logs/{localDate}": {
+      "put": {
+        "operationId": "checkInHabit",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/HabitId"
+          },
+          {
+            "name": "localDate",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CheckInInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Idempotent daily log.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HabitLog"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      },
+      "delete": {
+        "operationId": "removeHabitCheckIn",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/HabitId"
+          },
+          {
+            "name": "localDate",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Daily check-in removed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "deleted"
+                  ],
+                  "properties": {
+                    "deleted": {
+                      "type": "boolean",
+                      "const": true
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/journal/{localDate}": {
+      "get": {
+        "operationId": "getDailyJournal",
+        "parameters": [
+          {
+            "name": "localDate",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Daily reflection for the selected date.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DailyJournal"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      },
+      "put": {
+        "operationId": "saveDailyJournal",
+        "parameters": [
+          {
+            "name": "localDate",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DailyJournalInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Daily reflection saved.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DailyJournal"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/tracking": {
+      "get": {
+        "operationId": "getTrackingReport",
+        "parameters": [
+          {
+            "name": "from",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Tracking report for a range of up to 366 days.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TrackingReport"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/notifications": {
+      "get": {
+        "operationId": "listNotifications",
+        "responses": {
+          "200": {
+            "description": "Current user's in-app notifications.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/NotificationDelivery"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/session": {
+      "get": {
+        "operationId": "getAdminSession",
+        "responses": {
+          "200": {
+            "description": "Authorized support or super-admin session.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store, max-age=0"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SupportSession"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/admin/users": {
+      "get": {
+        "operationId": "adminListUsers",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 50
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Support user search results.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "count",
+                    "page",
+                    "pageSize"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Profile"
+                      }
+                    },
+                    "count": {
+                      "type": "integer"
+                    },
+                    "page": {
+                      "type": "integer"
+                    },
+                    "pageSize": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/admin/users/{userId}": {
+      "patch": {
+        "operationId": "adminUpdateUser",
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "suspended",
+                  "reason"
+                ],
+                "properties": {
+                  "suspended": {
+                    "type": "boolean"
+                  },
+                  "reason": {
+                    "type": "string",
+                    "minLength": 3,
+                    "maxLength": 500
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated user."
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/admin/users/{userId}/details": {
+      "get": {
+        "operationId": "adminGetUserDetails",
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "User account, habits, activity, prayer, notification, session, verification, and installation data."
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/admin/users/{userId}/profile": {
+      "patch": {
+        "operationId": "adminUpdateUserProfile",
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminUserUpdateInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated user profile and administrator role."
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/admin/users/{userId}/role": {
+      "patch": {
+        "operationId": "adminUpdateUserRole",
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          },
+          { "$ref": "#/components/parameters/IdempotencyKey" }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/AdminRoleUpdateInput" }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Updated administrator role." },
+          "400": { "$ref": "#/components/responses/Error" },
+          "403": { "$ref": "#/components/responses/Error" },
+          "409": { "$ref": "#/components/responses/Error" }
+        }
+      }
+    },
+    "/admin/users/{userId}/prayer-settings": {
+      "patch": {
+        "operationId": "adminUpdateUserPrayerSettings",
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          },
+          { "$ref": "#/components/parameters/IdempotencyKey" }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/AdminPrayerSettingsInput" }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Updated prayer calculation and location settings." },
+          "400": { "$ref": "#/components/responses/Error" },
+          "403": { "$ref": "#/components/responses/Error" }
+        }
+      }
+    },
+    "/admin/users/{userId}/password": {
+      "post": {
+        "operationId": "adminChangeUserPassword",
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminPasswordChangeInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Permanent password changed and all user sessions revoked."
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/admin/users/{userId}/habits/{habitId}": {
+      "patch": {
+        "operationId": "adminUpdateUserHabit",
+        "parameters": [
+          { "name": "userId", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } },
+          { "name": "habitId", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } },
+          { "$ref": "#/components/parameters/IdempotencyKey" }
+        ],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "object" } } } },
+        "responses": { "200": { "description": "User habit and reminder updated." }, "403": { "$ref": "#/components/responses/Error" } }
+      }
+    },
+    "/admin/users/{userId}/habits/{habitId}/check-ins/{localDate}": {
+      "put": {
+        "operationId": "adminSaveUserCheckIn",
+        "parameters": [
+          { "name": "userId", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } },
+          { "name": "habitId", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } },
+          { "name": "localDate", "in": "path", "required": true, "schema": { "type": "string", "format": "date" } },
+          { "$ref": "#/components/parameters/IdempotencyKey" }
+        ],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CheckInInput" } } } },
+        "responses": { "200": { "description": "User check-in saved." } }
+      },
+      "delete": {
+        "operationId": "adminDeleteUserCheckIn",
+        "parameters": [
+          { "name": "userId", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } },
+          { "name": "habitId", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } },
+          { "name": "localDate", "in": "path", "required": true, "schema": { "type": "string", "format": "date" } },
+          { "$ref": "#/components/parameters/IdempotencyKey" }
+        ],
+        "responses": { "200": { "description": "User check-in deleted." } }
+      }
+    },
+    "/admin/users/{userId}/journals/{localDate}": {
+      "put": {
+        "operationId": "adminSaveUserJournal",
+        "parameters": [
+          { "name": "userId", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } },
+          { "name": "localDate", "in": "path", "required": true, "schema": { "type": "string", "format": "date" } },
+          { "$ref": "#/components/parameters/IdempotencyKey" }
+        ],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/DailyJournalInput" } } } },
+        "responses": { "200": { "description": "User journal saved." } }
+      },
+      "delete": {
+        "operationId": "adminDeleteUserJournal",
+        "parameters": [
+          { "name": "userId", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } },
+          { "name": "localDate", "in": "path", "required": true, "schema": { "type": "string", "format": "date" } },
+          { "$ref": "#/components/parameters/IdempotencyKey" }
+        ],
+        "responses": { "200": { "description": "User journal deleted." } }
+      }
+    },
+    "/admin/users/{userId}/prayers/{prayer}/logs/{localDate}": {
+      "put": {
+        "operationId": "adminSaveUserPrayerLog",
+        "parameters": [
+          { "name": "userId", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } },
+          { "name": "prayer", "in": "path", "required": true, "schema": { "$ref": "#/components/schemas/PrayerName" } },
+          { "name": "localDate", "in": "path", "required": true, "schema": { "type": "string", "format": "date" } },
+          { "$ref": "#/components/parameters/IdempotencyKey" }
+        ],
+        "responses": { "200": { "description": "User prayer log saved." } }
+      },
+      "delete": {
+        "operationId": "adminDeleteUserPrayerLog",
+        "parameters": [
+          { "name": "userId", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } },
+          { "name": "prayer", "in": "path", "required": true, "schema": { "$ref": "#/components/schemas/PrayerName" } },
+          { "name": "localDate", "in": "path", "required": true, "schema": { "type": "string", "format": "date" } },
+          { "$ref": "#/components/parameters/IdempotencyKey" }
+        ],
+        "responses": { "200": { "description": "User prayer log deleted." } }
+      }
+    },
+    "/admin/users/{userId}/prayer-reminders/{prayer}": {
+      "put": {
+        "operationId": "adminSaveUserPrayerReminder",
+        "parameters": [
+          { "name": "userId", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } },
+          { "name": "prayer", "in": "path", "required": true, "schema": { "$ref": "#/components/schemas/PrayerName" } },
+          { "$ref": "#/components/parameters/IdempotencyKey" }
+        ],
+        "responses": { "200": { "description": "User prayer reminder saved." } }
+      }
+    },
+    "/admin/users/{userId}/sessions/revoke": {
+      "post": {
+        "operationId": "adminRevokeUserSessions",
+        "parameters": [
+          { "name": "userId", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } },
+          { "$ref": "#/components/parameters/IdempotencyKey" }
+        ],
+        "responses": { "200": { "description": "All active user sessions revoked." } }
+      }
+    },
+    "/admin/users/{userId}/verification-requests/invalidate": {
+      "post": {
+        "operationId": "adminInvalidateUserVerificationRequests",
+        "parameters": [
+          { "name": "userId", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } },
+          { "$ref": "#/components/parameters/IdempotencyKey" }
+        ],
+        "responses": { "200": { "description": "Pending user verification requests invalidated." } }
+      }
+    },
+    "/admin/users/{userId}/installations/{installationId}": {
+      "patch": {
+        "operationId": "adminUpdateUserInstallation",
+        "parameters": [
+          { "name": "userId", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } },
+          { "name": "installationId", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } },
+          { "$ref": "#/components/parameters/IdempotencyKey" }
+        ],
+        "responses": { "200": { "description": "User installation status updated." } }
+      }
+    },
+    "/admin/templates": {
+      "get": {
+        "operationId": "adminListTemplates",
+        "responses": {
+          "200": {
+            "description": "All habit templates."
+          }
+        }
+      },
+      "post": {
+        "operationId": "adminCreateTemplate",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HabitTemplate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created template."
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/admin/templates/{templateId}": {
+      "patch": {
+        "operationId": "adminUpdateTemplate",
+        "parameters": [
+          {
+            "name": "templateId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Updated template."
+          }
+        }
+      }
+    },
+    "/admin/notifications": {
+      "get": {
+        "operationId": "adminListNotifications",
+        "responses": {
+          "200": {
+            "description": "Recent notification deliveries."
+          }
+        }
+      }
+    },
+    "/admin/notifications/{deliveryId}/retry": {
+      "post": {
+        "operationId": "adminRetryNotification",
+        "parameters": [
+          {
+            "name": "deliveryId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Notification queued for retry."
+          }
+        }
+      }
+    },
+    "/admin/notifications/{deliveryId}/cancel": {
+      "post": {
+        "operationId": "adminCancelNotification",
+        "parameters": [
+          { "name": "deliveryId", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } },
+          { "$ref": "#/components/parameters/IdempotencyKey" }
+        ],
+        "responses": {
+          "200": { "description": "Scheduled or failed notification cancelled." },
+          "400": { "$ref": "#/components/responses/Error" },
+          "403": { "$ref": "#/components/responses/Error" }
+        }
+      }
+    },
+    "/admin/announcements": {
+      "post": {
+        "operationId": "adminCreateAnnouncement",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AnnouncementInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Announcement queued."
+          }
+        }
+      }
+    },
+    "/admin/analytics": {
+      "get": {
+        "operationId": "adminGetAnalytics",
+        "responses": {
+          "200": {
+            "description": "Basic usage analytics."
+          }
+        }
+      }
+    },
+    "/admin/health": {
+      "get": {
+        "operationId": "adminGetHealth",
+        "responses": {
+          "200": {
+            "description": "Protected integration and queue health."
+          }
+        }
+      }
+    },
+    "/admin/audit-logs": {
+      "get": {
+        "operationId": "adminListAuditLogs",
+        "responses": {
+          "200": {
+            "description": "Recent audit records."
+          }
+        }
+      }
+    },
+    "/habit-recommendations": {
+      "post": {
+        "operationId": "getHabitRecommendations",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecommendationInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Ranked habit recommendations.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/HabitTemplate"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/preferences": {
+      "put": {
+        "operationId": "updatePreferences",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PreferencesInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Preferences updated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "updated": {
+                      "type": "boolean",
+                      "const": true
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/prayer-times": {
+      "get": {
+        "operationId": "getPrayerTimes",
+        "parameters": [
+          {
+            "name": "date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Calculated prayer schedule.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PrayerSchedule"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/prayers/{prayer}/logs/{localDate}": {
+      "put": {
+        "operationId": "checkInPrayer",
+        "parameters": [
+          {
+            "name": "prayer",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/PrayerName"
+            }
+          },
+          {
+            "name": "localDate",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PrayerCheckInInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Prayer check-in saved.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PrayerLog"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/habits/{habitId}/reminder": {
+      "put": {
+        "operationId": "updateHabitReminder",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/HabitId"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HabitReminderInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Habit reminder updated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "enabled",
+                    "time"
+                  ],
+                  "properties": {
+                    "enabled": {
+                      "type": "boolean"
+                    },
+                    "time": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/push/installations": {
+      "post": {
+        "operationId": "registerFirebaseInstallation",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FirebaseInstallationInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Firebase installation registered.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "registered": {
+                      "type": "boolean",
+                      "const": true
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/push/installations/{installationId}": {
+      "delete": {
+        "operationId": "unregisterFirebaseInstallation",
+        "parameters": [
+          {
+            "name": "installationId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Firebase installation deactivated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "unregistered": {
+                      "type": "boolean",
+                      "const": true
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/sync/push": {
+      "post": {
+        "operationId": "pushSyncMutations",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/SyncPushInput" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Ordered mutations processed idempotently.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/SyncPushResponse" }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/Error" },
+          "401": { "$ref": "#/components/responses/Error" }
+        }
+      }
+    },
+    "/sync/pull": {
+      "get": {
+        "operationId": "pullSyncChanges",
+        "parameters": [
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 500,
+              "default": 500
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Initial snapshot or incremental user changes.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/SyncPullResponse" }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/Error" },
+          "401": { "$ref": "#/components/responses/Error" }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "OpaqueSessionToken"
+      }
+    },
+    "parameters": {
+      "HabitId": {
+        "name": "habitId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      "IdempotencyKey": {
+        "name": "Idempotency-Key",
+        "in": "header",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        }
+      }
+    },
+    "responses": {
+      "Error": {
+        "description": "Consistent error envelope.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorEnvelope"
+            }
+          }
+        }
+      }
+    },
+    "schemas": {
+      "Liveness": {
+        "type": "object",
+        "required": [
+          "status",
+          "service",
+          "timestamp"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "ok"
+          },
+          "service": {
+            "type": "string",
+            "const": "smart-habit-api"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "Readiness": {
+        "type": "object",
+        "required": [
+          "status",
+          "dependencies",
+          "timestamp"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "ready"
+          },
+          "dependencies": {
+            "type": "object",
+            "required": [
+              "postgres",
+              "queue"
+            ],
+            "properties": {
+              "postgres": {
+                "type": "string",
+                "const": "ready"
+              },
+              "queue": {
+                "type": "string",
+                "const": "ready"
+              }
+            }
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "SignupInput": {
+        "type": "object",
+        "required": [
+          "name",
+          "email",
+          "password"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 80
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "maxLength": 254
+          },
+          "password": {
+            "type": "string",
+            "minLength": 8,
+            "maxLength": 128
+          }
+        }
+      },
+      "LoginInput": {
+        "type": "object",
+        "required": [
+          "email",
+          "password"
+        ],
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "maxLength": 254
+          },
+          "password": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          }
+        }
+      },
+      "EmailInput": {
+        "type": "object",
+        "required": [
+          "email"
+        ],
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "maxLength": 254
+          }
+        }
+      },
+      "VerificationInput": {
+        "type": "object",
+        "required": [
+          "email",
+          "code"
+        ],
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "maxLength": 254
+          },
+          "code": {
+            "type": "string",
+            "pattern": "^\\d{6}$"
+          }
+        }
+      },
+      "EmailChangeVerificationInput": {
+        "type": "object",
+        "required": ["code"],
+        "properties": {
+          "code": {
+            "type": "string",
+            "pattern": "^\\d{6}$"
+          }
+        }
+      },
+      "EmailChangePending": {
+        "type": "object",
+        "required": ["pendingEmail", "expiresAt"],
+        "properties": {
+          "pendingEmail": { "type": "string", "format": "email" },
+          "expiresAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "ProfileUpdateInput": {
+        "type": "object",
+        "required": ["name", "timezone", "units"],
+        "properties": {
+          "name": { "type": "string", "minLength": 2, "maxLength": 80 },
+          "timezone": { "type": "string", "minLength": 1, "maxLength": 100 },
+          "units": { "type": "string", "enum": ["metric", "imperial"] }
+        }
+      },
+      "PasswordChangeInput": {
+        "type": "object",
+        "required": ["currentPassword", "newPassword"],
+        "properties": {
+          "currentPassword": { "type": "string", "minLength": 1, "maxLength": 128 },
+          "newPassword": { "type": "string", "minLength": 8, "maxLength": 128 }
+        }
+      },
+      "AdminUserUpdateInput": {
+        "type": "object",
+        "required": [
+          "name",
+          "email",
+          "timezone",
+          "units",
+          "goals",
+          "pace",
+          "religion",
+          "dailyDigestTime",
+          "dailyDigestEnabled",
+          "role"
+        ],
+        "properties": {
+          "name": { "type": "string", "minLength": 2, "maxLength": 80 },
+          "email": { "type": "string", "format": "email" },
+          "timezone": { "type": "string" },
+          "units": { "type": "string", "enum": ["metric", "imperial"] },
+          "goals": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": ["movement", "nutrition", "learning", "sleep", "mindfulness"]
+            },
+            "maxItems": 5,
+            "uniqueItems": true
+          },
+          "pace": { "type": "string", "enum": ["light", "balanced", "ambitious"] },
+          "religion": { "type": "string", "enum": ["muslim", "other", "unspecified"] },
+          "dailyDigestTime": {
+            "type": "string",
+            "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$"
+          },
+          "dailyDigestEnabled": { "type": "boolean" },
+          "role": {
+            "type": ["string", "null"],
+            "enum": ["support", "super_admin", null]
+          }
+        }
+      },
+      "AdminPasswordChangeInput": {
+        "type": "object",
+        "required": ["newPassword", "confirmation", "adminPassword"],
+        "properties": {
+          "newPassword": { "type": "string", "minLength": 8, "maxLength": 128 },
+          "confirmation": { "type": "string", "minLength": 8, "maxLength": 128 },
+          "adminPassword": { "type": "string", "minLength": 1, "maxLength": 128 }
+        }
+      },
+      "AdminRoleUpdateInput": {
+        "type": "object",
+        "required": ["role"],
+        "properties": {
+          "role": {
+            "type": ["string", "null"],
+            "enum": ["support", "super_admin", null]
+          }
+        }
+      },
+      "AdminPrayerSettingsInput": {
+        "type": "object",
+        "required": ["enabled", "latitude", "longitude", "madhab", "calculationMethod"],
+        "properties": {
+          "enabled": { "type": "boolean" },
+          "latitude": { "type": ["number", "null"], "minimum": -90, "maximum": 90 },
+          "longitude": { "type": ["number", "null"], "minimum": -180, "maximum": 180 },
+          "madhab": {
+            "type": ["string", "null"],
+            "enum": ["hanafi", "shafi", "maliki", "hanbali", null]
+          },
+          "calculationMethod": {
+            "type": ["string", "null"],
+            "enum": ["karachi", "muslim_world_league", "egyptian", "umm_al_qura", "dubai", "qatar", "kuwait", "moonsighting_committee", "singapore", "turkey", "tehran", "north_america", null]
+          }
+        }
+      },
+      "EmailChangeInput": {
+        "type": "object",
+        "required": ["currentPassword", "newEmail"],
+        "properties": {
+          "currentPassword": { "type": "string", "minLength": 1, "maxLength": 128 },
+          "newEmail": { "type": "string", "format": "email", "maxLength": 254 }
+        }
+      },
+      "DeleteAccountInput": {
+        "type": "object",
+        "required": ["currentPassword", "confirmation"],
+        "properties": {
+          "currentPassword": { "type": "string", "minLength": 1, "maxLength": 128 },
+          "confirmation": { "type": "string", "const": "DELETE" }
+        }
+      },
+      "VerificationRequired": {
+        "type": "object",
+        "required": [
+          "requiresVerification",
+          "email",
+          "expiresAt",
+          "message"
+        ],
+        "properties": {
+          "requiresVerification": {
+            "type": "boolean",
+            "const": true
+          },
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "message": {
+            "type": "string"
+          }
+        }
+      },
+      "AuthUser": {
+        "type": "object",
+        "required": [
+          "id",
+          "email",
+          "name",
+          "onboardingCompleted"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "name": {
+            "type": "string"
+          },
+          "onboardingCompleted": {
+            "type": "boolean"
+          }
+        }
+      },
+      "AuthSession": {
+        "type": "object",
+        "required": [
+          "accessToken",
+          "expiresAt",
+          "user"
+        ],
+        "properties": {
+          "accessToken": {
+            "type": "string"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "user": {
+            "$ref": "#/components/schemas/AuthUser"
+          }
+        }
+      },
+      "ActiveSession": {
+        "type": "object",
+        "required": ["id", "current", "createdAt", "expiresAt"],
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "current": { "type": "boolean" },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "expiresAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "SupportSession": {
+        "type": "object",
+        "required": [
+          "userId",
+          "email",
+          "name",
+          "role"
+        ],
+        "properties": {
+          "userId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "name": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "support",
+              "super_admin"
+            ]
+          }
+        }
+      },
+      "Profile": {
+        "type": "object",
+        "required": [
+          "id",
+          "email",
+          "name",
+          "timezone",
+          "units",
+          "account_created_at",
+          "has_avatar"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "name": {
+            "type": "string"
+          },
+          "timezone": {
+            "type": "string"
+          },
+          "units": {
+            "type": "string",
+            "enum": ["metric", "imperial"]
+          },
+          "account_created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "has_avatar": {
+            "type": "boolean"
+          },
+          "avatar_updated_at": {
+            "type": ["string", "null"],
+            "format": "date-time"
+          },
+          "suspended_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "deleted_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "onboarding_completed_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "goal_preferences": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GoalPreference"
+            }
+          },
+          "starting_pace": {
+            "$ref": "#/components/schemas/StartingPace"
+          },
+          "religion_preference": {
+            "$ref": "#/components/schemas/ReligionPreference"
+          },
+          "daily_digest_time": {
+            "type": "string"
+          },
+          "daily_digest_enabled": {
+            "type": "boolean"
+          },
+          "latitude": {
+            "type": [
+              "number",
+              "string",
+              "null"
+            ]
+          },
+          "longitude": {
+            "type": [
+              "number",
+              "string",
+              "null"
+            ]
+          },
+          "madhab": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Madhab"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "prayer_calculation_method": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PrayerCalculationMethod"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "prayer_reminders": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "prayer_name",
+                "enabled",
+                "offset_minutes"
+              ],
+              "properties": {
+                "prayer_name": {
+                  "$ref": "#/components/schemas/PrayerName"
+                },
+                "enabled": {
+                  "type": "boolean"
+                },
+                "offset_minutes": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "push_enabled": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": true
+      },
+      "Frequency": {
+        "oneOf": [
+          {
+            "type": "object",
+            "required": [
+              "kind"
+            ],
+            "properties": {
+              "kind": {
+                "const": "daily"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "kind",
+              "target"
+            ],
+            "properties": {
+              "kind": {
+                "const": "weekly_target"
+              },
+              "target": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 7
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "kind",
+              "days"
+            ],
+            "properties": {
+              "kind": {
+                "const": "weekdays"
+              },
+              "days": {
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 6
+                },
+                "minItems": 1
+              }
+            }
+          }
+        ]
+      },
+      "OnboardingInput": {
+        "type": "object",
+        "required": [
+          "name",
+          "units",
+          "goals",
+          "pace",
+          "religion",
+          "dailyDigestTime",
+          "dailyDigestEnabled",
+          "prayerSetup",
+          "templateIds"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 80
+          },
+          "units": {
+            "type": "string",
+            "enum": [
+              "metric",
+              "imperial"
+            ]
+          },
+          "goals": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 5,
+            "uniqueItems": true,
+            "items": {
+              "$ref": "#/components/schemas/GoalPreference"
+            }
+          },
+          "pace": {
+            "$ref": "#/components/schemas/StartingPace"
+          },
+          "religion": {
+            "$ref": "#/components/schemas/ReligionPreference"
+          },
+          "dailyDigestTime": {
+            "type": "string",
+            "pattern": "^([01]\\\\d|2[0-3]):[0-5]\\\\d$"
+          },
+          "dailyDigestEnabled": {
+            "type": "boolean"
+          },
+          "prayerSetup": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PrayerSetup"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "templateIds": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 6,
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        }
+      },
+      "CreateHabitInput": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/TemplateHabitInput"
+          },
+          {
+            "$ref": "#/components/schemas/CustomHabitInput"
+          }
+        ]
+      },
+      "TemplateHabitInput": {
+        "type": "object",
+        "required": [
+          "templateId"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "templateId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "CustomHabitInput": {
+        "type": "object",
+        "required": [
+          "name",
+          "icon",
+          "category",
+          "type",
+          "frequency"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80
+          },
+          "icon": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 8
+          },
+          "category": {
+            "type": "string",
+            "enum": [
+              "diet",
+              "prayer",
+              "steps",
+              "gym",
+              "food",
+              "learning",
+              "other"
+            ]
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "do",
+              "avoid",
+              "count",
+              "duration"
+            ]
+          },
+          "target": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "exclusiveMinimum": 0
+          },
+          "unit": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 24
+          },
+          "frequency": {
+            "$ref": "#/components/schemas/Frequency"
+          },
+          "forgiving": {
+            "type": "boolean",
+            "default": false
+          }
+        }
+      },
+      "CheckInInput": {
+        "type": "object",
+        "required": [
+          "status"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "done",
+              "skipped",
+              "partial"
+            ]
+          },
+          "value": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "minimum": 0
+          },
+          "note": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 1000
+          },
+          "prayerStatus": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "on_time",
+              "late",
+              "missed",
+              null
+            ]
+          }
+        }
+      },
+      "Habit": {
+        "type": "object",
+        "required": [
+          "id",
+          "user_id",
+          "name",
+          "icon",
+          "category",
+          "habit_type",
+          "frequency",
+          "state"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "user_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "icon": {
+            "type": "string"
+          },
+          "category": {
+            "type": "string"
+          },
+          "habit_type": {
+            "type": "string",
+            "enum": [
+              "do",
+              "avoid",
+              "count",
+              "duration"
+            ]
+          },
+          "target": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "unit": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "frequency": {
+            "$ref": "#/components/schemas/Frequency"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "active",
+              "paused",
+              "archived"
+            ]
+          },
+          "reminder_enabled": {
+            "type": "boolean"
+          },
+          "reminder_time": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "additionalProperties": true
+      },
+      "HabitTemplate": {
+        "type": "object",
+        "required": [
+          "name",
+          "icon",
+          "category",
+          "habit_type"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "icon": {
+            "type": "string"
+          },
+          "category": {
+            "type": "string"
+          },
+          "habit_type": {
+            "type": "string",
+            "enum": [
+              "do",
+              "avoid",
+              "count",
+              "duration"
+            ]
+          },
+          "active": {
+            "type": "boolean"
+          },
+          "goal_tags": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GoalPreference"
+            }
+          },
+          "recommendation_priority": {
+            "type": "integer"
+          }
+        },
+        "additionalProperties": true
+      },
+      "HabitLog": {
+        "type": "object",
+        "required": [
+          "id",
+          "habit_id",
+          "user_id",
+          "local_date",
+          "status"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "habit_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "user_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "local_date": {
+            "type": "string",
+            "format": "date"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "done",
+              "skipped",
+              "partial"
+            ]
+          },
+          "value": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "note": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "additionalProperties": true
+      },
+      "DailyJournalInput": {
+        "type": "object",
+        "properties": {
+          "winNote": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 1000
+          },
+          "reflectionNote": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 1000
+          }
+        }
+      },
+      "DailyJournal": {
+        "type": "object",
+        "required": [
+          "id",
+          "user_id",
+          "local_date",
+          "win_note",
+          "reflection_note"
+        ],
+        "properties": {
+          "id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "user_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "local_date": {
+            "type": "string",
+            "format": "date"
+          },
+          "win_note": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "reflection_note": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "TrackingHabit": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "icon",
+          "habit_type",
+          "target",
+          "unit",
+          "status",
+          "value",
+          "note"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "icon": {
+            "type": "string"
+          },
+          "habit_type": {
+            "type": "string",
+            "enum": [
+              "do",
+              "avoid",
+              "count",
+              "duration"
+            ]
+          },
+          "target": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "unit": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "done",
+              "skipped",
+              "partial",
+              "not_checked"
+            ]
+          },
+          "value": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "note": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "TrackingDay": {
+        "type": "object",
+        "required": [
+          "date",
+          "completed",
+          "scheduled",
+          "completionRate",
+          "winNote",
+          "reflectionNote",
+          "habits"
+        ],
+        "properties": {
+          "date": {
+            "type": "string",
+            "format": "date"
+          },
+          "completed": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "scheduled": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "completionRate": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 100
+          },
+          "winNote": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "reflectionNote": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "habits": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TrackingHabit"
+            }
+          }
+        }
+      },
+      "TrackingReport": {
+        "type": "object",
+        "required": [
+          "from",
+          "to",
+          "totalCompleted",
+          "totalScheduled",
+          "completionRate",
+          "days"
+        ],
+        "properties": {
+          "from": {
+            "type": "string",
+            "format": "date"
+          },
+          "to": {
+            "type": "string",
+            "format": "date"
+          },
+          "totalCompleted": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "totalScheduled": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "completionRate": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 100
+          },
+          "days": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TrackingDay"
+            }
+          }
+        }
+      },
+      "NotificationDelivery": {
+        "type": "object",
+        "required": [
+          "id",
+          "channel",
+          "title",
+          "body",
+          "state",
+          "scheduled_at"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "channel": {
+            "type": "string",
+            "enum": [
+              "push",
+              "email",
+              "in_app"
+            ]
+          },
+          "title": {
+            "type": "string"
+          },
+          "body": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "scheduled",
+              "processing",
+              "sent",
+              "failed",
+              "cancelled"
+            ]
+          },
+          "scheduled_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "additionalProperties": true
+      },
+      "AnnouncementInput": {
+        "type": "object",
+        "required": [
+          "title",
+          "body",
+          "channels"
+        ],
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 100
+          },
+          "body": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 1000
+          },
+          "channels": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string",
+              "enum": [
+                "push",
+                "email",
+                "in_app"
+              ]
+            }
+          }
+        }
+      },
+      "ErrorEnvelope": {
+        "type": "object",
+        "required": [
+          "code",
+          "message",
+          "correlationId",
+          "retryable"
+        ],
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          },
+          "correlationId": {
+            "type": "string"
+          },
+          "retryable": {
+            "type": "boolean"
+          },
+          "fieldErrors": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "details": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      },
+      "GoalPreference": {
+        "type": "string",
+        "enum": [
+          "movement",
+          "nutrition",
+          "learning",
+          "sleep",
+          "mindfulness"
+        ]
+      },
+      "StartingPace": {
+        "type": "string",
+        "enum": [
+          "light",
+          "balanced",
+          "ambitious"
+        ]
+      },
+      "ReligionPreference": {
+        "type": "string",
+        "enum": [
+          "muslim",
+          "other",
+          "unspecified"
+        ]
+      },
+      "Madhab": {
+        "type": "string",
+        "enum": [
+          "hanafi",
+          "shafi",
+          "maliki",
+          "hanbali"
+        ]
+      },
+      "PrayerCalculationMethod": {
+        "type": "string",
+        "enum": [
+          "karachi",
+          "muslim_world_league",
+          "egyptian",
+          "umm_al_qura",
+          "dubai",
+          "qatar",
+          "kuwait",
+          "moonsighting_committee",
+          "singapore",
+          "turkey",
+          "tehran",
+          "north_america"
+        ]
+      },
+      "PrayerName": {
+        "type": "string",
+        "enum": [
+          "fajr",
+          "dhuhr",
+          "asr",
+          "maghrib",
+          "isha"
+        ]
+      },
+      "PrayerReminder": {
+        "type": "object",
+        "required": [
+          "prayer",
+          "enabled",
+          "offsetMinutes"
+        ],
+        "properties": {
+          "prayer": {
+            "$ref": "#/components/schemas/PrayerName"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "offsetMinutes": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 120
+          }
+        }
+      },
+      "PrayerSetup": {
+        "type": "object",
+        "required": [
+          "latitude",
+          "longitude",
+          "timezone",
+          "madhab",
+          "calculationMethod",
+          "reminders"
+        ],
+        "properties": {
+          "latitude": {
+            "type": "number",
+            "minimum": -90,
+            "maximum": 90
+          },
+          "longitude": {
+            "type": "number",
+            "minimum": -180,
+            "maximum": 180
+          },
+          "timezone": {
+            "type": "string"
+          },
+          "madhab": {
+            "$ref": "#/components/schemas/Madhab"
+          },
+          "calculationMethod": {
+            "$ref": "#/components/schemas/PrayerCalculationMethod"
+          },
+          "reminders": {
+            "type": "array",
+            "minItems": 5,
+            "maxItems": 5,
+            "items": {
+              "$ref": "#/components/schemas/PrayerReminder"
+            }
+          }
+        }
+      },
+      "RecommendationInput": {
+        "type": "object",
+        "required": [
+          "goals",
+          "pace"
+        ],
+        "properties": {
+          "goals": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 5,
+            "uniqueItems": true,
+            "items": {
+              "$ref": "#/components/schemas/GoalPreference"
+            }
+          },
+          "pace": {
+            "$ref": "#/components/schemas/StartingPace"
+          }
+        }
+      },
+      "PreferencesInput": {
+        "type": "object",
+        "required": [
+          "goals",
+          "pace",
+          "religion",
+          "dailyDigestTime",
+          "dailyDigestEnabled",
+          "prayerSetup"
+        ],
+        "properties": {
+          "goals": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 5,
+            "uniqueItems": true,
+            "items": {
+              "$ref": "#/components/schemas/GoalPreference"
+            }
+          },
+          "pace": {
+            "$ref": "#/components/schemas/StartingPace"
+          },
+          "religion": {
+            "$ref": "#/components/schemas/ReligionPreference"
+          },
+          "dailyDigestTime": {
+            "type": "string",
+            "pattern": "^([01]\\\\d|2[0-3]):[0-5]\\\\d$"
+          },
+          "dailyDigestEnabled": {
+            "type": "boolean"
+          },
+          "prayerSetup": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PrayerSetup"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        }
+      },
+      "PrayerSchedule": {
+        "type": "object",
+        "required": [
+          "date",
+          "timezone",
+          "madhab",
+          "calculationMethod",
+          "prayers",
+          "nextPrayer"
+        ],
+        "properties": {
+          "date": {
+            "type": "string",
+            "format": "date"
+          },
+          "timezone": {
+            "type": "string"
+          },
+          "madhab": {
+            "$ref": "#/components/schemas/Madhab"
+          },
+          "calculationMethod": {
+            "$ref": "#/components/schemas/PrayerCalculationMethod"
+          },
+          "prayers": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "name",
+                "time",
+                "status"
+              ],
+              "properties": {
+                "name": {
+                  "$ref": "#/components/schemas/PrayerName"
+                },
+                "time": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "status": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "enum": [
+                    "on_time",
+                    "late",
+                    "missed",
+                    null
+                  ]
+                }
+              }
+            }
+          },
+          "nextPrayer": {
+            "anyOf": [
+              {
+                "type": "object",
+                "required": [
+                  "name",
+                  "time"
+                ],
+                "properties": {
+                  "name": {
+                    "$ref": "#/components/schemas/PrayerName"
+                  },
+                  "time": {
+                    "type": "string",
+                    "format": "date-time"
+                  }
+                }
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        }
+      },
+      "PrayerCheckInInput": {
+        "type": "object",
+        "required": [
+          "status"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "on_time",
+              "late",
+              "missed"
+            ]
+          }
+        }
+      },
+      "PrayerLog": {
+        "type": "object",
+        "required": [
+          "id",
+          "user_id",
+          "local_date",
+          "prayer_name",
+          "status"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "user_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "local_date": {
+            "type": "string",
+            "format": "date"
+          },
+          "prayer_name": {
+            "$ref": "#/components/schemas/PrayerName"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "on_time",
+              "late",
+              "missed"
+            ]
+          }
+        }
+      },
+      "HabitReminderInput": {
+        "oneOf": [
+          {
+            "type": "object",
+            "required": [
+              "enabled",
+              "time"
+            ],
+            "properties": {
+              "enabled": {
+                "const": true
+              },
+              "time": {
+                "type": "string",
+                "pattern": "^([01]\\\\d|2[0-3]):[0-5]\\\\d$"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "enabled"
+            ],
+            "properties": {
+              "enabled": {
+                "const": false
+              },
+              "time": {
+                "type": [
+                  "null",
+                  "string"
+                ]
+              }
+            }
+          }
+        ]
+      },
+      "FirebaseInstallationInput": {
+        "type": "object",
+        "required": [
+          "installationId"
+        ],
+        "properties": {
+          "installationId": {
+            "type": "string",
+            "minLength": 10,
+            "maxLength": 255
+          },
+          "platform": {
+            "type": "string",
+            "enum": ["web", "ios", "android"],
+            "default": "web"
+          },
+          "pushToken": {
+            "type": "string",
+            "minLength": 10,
+            "maxLength": 4096
+          }
+        }
+      },
+      "SyncEntityType": {
+        "type": "string",
+        "enum": [
+          "profile",
+          "preferences",
+          "habit",
+          "habit_log",
+          "journal",
+          "prayer_log",
+          "habit_reminder",
+          "prayer_reminder",
+          "onboarding",
+          "push_installation"
+        ]
+      },
+      "SyncMutation": {
+        "type": "object",
+        "required": [
+          "mutationId",
+          "entityType",
+          "entityId",
+          "operation",
+          "clientModifiedAt",
+          "payload"
+        ],
+        "properties": {
+          "mutationId": { "type": "string", "format": "uuid" },
+          "entityType": { "$ref": "#/components/schemas/SyncEntityType" },
+          "entityId": { "type": "string", "minLength": 1, "maxLength": 255 },
+          "operation": { "type": "string", "enum": ["upsert", "delete"] },
+          "clientModifiedAt": { "type": "string", "format": "date-time" },
+          "payload": { "type": "object", "additionalProperties": true }
+        }
+      },
+      "SyncPushInput": {
+        "type": "object",
+        "required": ["deviceId", "mutations"],
+        "properties": {
+          "deviceId": { "type": "string", "minLength": 10, "maxLength": 255 },
+          "mutations": {
+            "type": "array",
+            "maxItems": 100,
+            "items": { "$ref": "#/components/schemas/SyncMutation" }
+          }
+        }
+      },
+      "SyncMutationResult": {
+        "type": "object",
+        "required": ["mutationId", "status"],
+        "properties": {
+          "mutationId": { "type": "string", "format": "uuid" },
+          "status": {
+            "type": "string",
+            "enum": ["applied", "superseded", "retryable", "rejected"]
+          },
+          "canonical": {},
+          "code": { "type": "string" },
+          "message": { "type": "string" }
+        }
+      },
+      "SyncPushResponse": {
+        "type": "object",
+        "required": ["results", "serverTime"],
+        "properties": {
+          "results": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/SyncMutationResult" }
+          },
+          "serverTime": { "type": "string", "format": "date-time" }
+        }
+      },
+      "SyncChange": {
+        "type": "object",
+        "required": [
+          "sequence",
+          "entityType",
+          "entityId",
+          "operation",
+          "changedAt"
+        ],
+        "properties": {
+          "sequence": { "type": "string" },
+          "entityType": { "type": "string" },
+          "entityId": { "type": "string" },
+          "operation": { "type": "string", "enum": ["upsert", "delete"] },
+          "payload": { "type": ["object", "null"], "additionalProperties": true },
+          "changedAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "SyncPullResponse": {
+        "type": "object",
+        "required": ["changes", "nextCursor", "hasMore", "serverTime"],
+        "properties": {
+          "snapshot": { "type": "object", "additionalProperties": true },
+          "changes": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/SyncChange" }
+          },
+          "nextCursor": { "type": "string" },
+          "hasMore": { "type": "boolean" },
+          "serverTime": { "type": "string", "format": "date-time" }
+        }
+      }
+    }
+  }
+}
