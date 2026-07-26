@@ -1,9 +1,14 @@
 "use client";
 
+import { redirect } from "next/navigation";
 import { localDateString } from "@/lib/dashboard";
+import { useDashboardShell } from "./dashboard-shell";
 import { PrayerPanel } from "./prayer-panel";
 
 export function PrayersPage() {
+  const { profile } = useDashboardShell();
+  if (profile.religion_preference !== "muslim") redirect("/dashboard");
+
   return (
     <div className="page-stack">
       <header className="page-heading">

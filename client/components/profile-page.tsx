@@ -1,5 +1,9 @@
 "use client";
 
+import {
+  useMutation,
+  useQueryClient,
+} from "@tanstack/react-query";
 import Cropper, { type Area } from "react-easy-crop";
 import {
   Camera,
@@ -27,8 +31,10 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ApiRequestError, apiRequest } from "@/lib/api";
+import type { ExperienceProfile } from "@/lib/api/types";
 import { croppedAvatarFile } from "@/lib/avatar-crop";
 import { unregisterPushNotifications } from "@/lib/firebase-messaging";
+import { queryKeys } from "@/lib/queries";
 import { useDashboardShell } from "./dashboard-shell";
 import { ProfileAvatar } from "./profile-avatar";
 
@@ -42,7 +48,8 @@ type BusyAction =
   | null;
 
 export function ProfilePage() {
-  const { profile, refreshProfile } = useDashboardShell();
+  const { profile } = useDashboardShell();
+  const queryClient = useQueryClient();
   const fileInput = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState<BusyAction>(null);
   const [name, setName] = useState(profile.name);
@@ -57,6 +64,47 @@ export function ProfilePage() {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deletePassword, setDeletePassword] = useState("");
   const [deleteConfirmation, setDeleteConfirmation] = useState("");
+  const updateProfileMutation = useMutation({
+    mutationFn: (payload: {
+      name: string;
+      timezone: string;
+      units: "metric" | "imperial";
+    }) => apiRequest<Partial<ExperienceProfile>>("/profile", {
+      method: "PATCH",
+      body: JSON.stringify(payload),
+    }),
+    onSuccess: (updated) => {
+      queryClient.setQueryData<ExperienceProfile>(
+        queryKeys.user.profile,
+        (current) => current ? { ...current, ...updated } : current,
+      );
+    },
+  });
+  const uploadAvatarMutation = useMutation({
+    mutationFn: (body: FormData) =>
+      apiRequest<Partial<ExperienceProfile>>("/profile/avatar", {
+        method: "PUT",
+        body,
+      }),
+    onSuccess: (updated) => {
+      queryClient.setQueryData<ExperienceProfile>(
+        queryKeys.user.profile,
+        (current) => current ? { ...current, ...updated } : current,
+      );
+    },
+  });
+  const removeAvatarMutation = useMutation({
+    mutationFn: () =>
+      apiRequest<Partial<ExperienceProfile>>("/profile/avatar", {
+        method: "DELETE",
+      }),
+    onSuccess: (updated) => {
+      queryClient.setQueryData<ExperienceProfile>(
+        queryKeys.user.profile,
+        (current) => current ? { ...current, ...updated } : current,
+      );
+    },
+  });
 
   const timezones = useMemo(() => supportedTimezones(profile.timezone), [profile.timezone]);
 
@@ -82,11 +130,11 @@ export function ProfilePage() {
     setBusy("profile");
     setFieldErrors({});
     try {
-      await apiRequest("/profile", {
-        method: "PATCH",
-        body: JSON.stringify({ name, timezone, units }),
+      await updateProfileMutation.mutateAsync({
+        name,
+        timezone,
+        units,
       });
-      await refreshProfile();
       toast.success("Personal details updated.");
     } catch (reason) {
       if (reason instanceof ApiRequestError) setFieldErrors(reason.fieldErrors ?? {});
@@ -122,9 +170,8 @@ export function ProfilePage() {
       const file = await croppedAvatarFile(cropSource, cropPixels);
       const body = new FormData();
       body.set("file", file);
-      await apiRequest("/profile/avatar", { method: "PUT", body });
+      await uploadAvatarMutation.mutateAsync(body);
       setCropSource("");
-      await refreshProfile();
       toast.success("Profile photo updated.");
     } catch (reason) {
       toast.error(errorMessage(reason, "The profile photo could not be uploaded."));
@@ -136,8 +183,7 @@ export function ProfilePage() {
   async function removeAvatar() {
     setBusy("avatar");
     try {
-      await apiRequest("/profile/avatar", { method: "DELETE" });
-      await refreshProfile();
+      await removeAvatarMutation.mutateAsync();
       toast.success("Profile photo removed.");
     } catch (reason) {
       toast.error(errorMessage(reason, "The profile photo could not be removed."));
@@ -216,6 +262,7 @@ export function ProfilePage() {
         currentPassword: deletePassword,
         confirmation: deleteConfirmation,
       });
+      queryClient.clear();
       window.location.assign("/?accountDeleted=true");
     } catch (reason) {
       toast.error(errorMessage(reason, "The account could not be scheduled for deletion."));

@@ -1,6 +1,10 @@
 "use client";
 
 import {
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
+import {
   Archive,
   BarChart3,
   Bell,
@@ -26,10 +30,10 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { apiRequest } from "@/lib/api";
 import type { ExperienceProfile, NotificationDelivery } from "@/lib/api/types";
 import { profileDisplayName } from "@/lib/dashboard";
 import { unregisterPushNotifications } from "@/lib/firebase-messaging";
+import { appQueries, queryKeys } from "@/lib/queries";
 import { ProfileAvatar } from "./profile-avatar";
 
 type DashboardContextValue = {
@@ -49,27 +53,37 @@ export function DashboardShell({
   children: ReactNode;
 }) {
   const pathname = usePathname();
-  const [profile, setProfile] = useState(initialProfile);
-  const [notifications, setNotifications] = useState<NotificationDelivery[]>([]);
+  const queryClient = useQueryClient();
+  const profileQuery = useQuery(appQueries.profile(initialProfile));
+  const notificationsQuery = useQuery(appQueries.notifications());
+  const profile = profileQuery.data;
+  const notifications = notificationsQuery.data ?? [];
   const [signingOut, setSigningOut] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
   const refreshProfile = useCallback(async () => {
-    setProfile(await apiRequest<ExperienceProfile>("/profile"));
-  }, []);
+    await queryClient.refetchQueries({
+      queryKey: queryKeys.user.profile,
+      exact: true,
+    });
+  }, [queryClient]);
+
   const refreshNotifications = useCallback(async () => {
-    setNotifications(await apiRequest<NotificationDelivery[]>("/notifications"));
-  }, []);
+    await queryClient.refetchQueries({
+      queryKey: queryKeys.user.notifications,
+      exact: true,
+    });
+  }, [queryClient]);
 
   useEffect(() => {
-    void refreshNotifications().catch(() => null);
-  }, [refreshNotifications]);
-
-  useEffect(() => {
-    const onNotification = () => void refreshNotifications().catch(() => null);
+    const onNotification = () => {
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.user.notifications,
+      });
+    };
     window.addEventListener("bloom:notification", onNotification);
     return () => window.removeEventListener("bloom:notification", onNotification);
-  }, [refreshNotifications]);
+  }, [queryClient]);
 
   useEffect(() => {
     setMobileNavOpen(false);
@@ -88,6 +102,7 @@ export function DashboardShell({
     setSigningOut(true);
     await unregisterPushNotifications().catch(() => null);
     await fetch("/api/auth/logout", { method: "POST" }).catch(() => null);
+    queryClient.clear();
     window.location.assign("/");
   }
 
@@ -108,7 +123,12 @@ export function DashboardShell({
     notifications,
     refreshProfile,
     refreshNotifications,
-  }), [notifications, profile, refreshNotifications, refreshProfile]);
+  }), [
+    notifications,
+    profile,
+    refreshNotifications,
+    refreshProfile,
+  ]);
 
   return (
     <DashboardContext.Provider value={context}>

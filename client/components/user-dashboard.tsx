@@ -1,6 +1,11 @@
 "use client";
 
 import {
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
+import {
   CalendarDays,
   Check,
   ChevronLeft,
@@ -11,91 +16,66 @@ import {
   Save,
   Sparkles,
 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { apiRequest } from "@/lib/api";
 import type { DailyJournal, HabitLog, TodayHabit } from "@/lib/api/types";
 import { localDateString } from "@/lib/dashboard";
+import {
+  appQueries,
+  queryKeys,
+  updateTodayHabitLog,
+} from "@/lib/queries";
 import { useDashboardShell } from "./dashboard-shell";
 
 export function UserDashboard() {
   const { profile } = useDashboardShell();
+  const queryClient = useQueryClient();
   const [selectedDate, setSelectedDate] = useState(() => localDateString());
-  const [habits, setHabits] = useState<TodayHabit[]>([]);
-  const [journal, setJournal] = useState<DailyJournal | null>(null);
   const [draft, setDraft] = useState({ winNote: "", reflectionNote: "" });
-  const [loading, setLoading] = useState(true);
-  const [savingJournal, setSavingJournal] = useState(false);
-  const [pendingHabit, setPendingHabit] = useState("");
-  const [error, setError] = useState("");
+  const draftDate = useRef("");
   const today = localDateString();
-
-  const loadDay = useCallback(async () => {
-    setLoading(true);
-    setError("");
-    try {
-      const [nextHabits, nextJournal] = await Promise.all([
-        apiRequest<TodayHabit[]>(`/today?date=${selectedDate}`),
-        apiRequest<DailyJournal>(`/journal/${selectedDate}`),
-      ]);
-      setHabits(nextHabits);
-      setJournal(nextJournal);
-      setDraft({
-        winNote: nextJournal.win_note ?? "",
-        reflectionNote: nextJournal.reflection_note ?? "",
-      });
-    } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "This day could not be loaded.");
-    } finally {
-      setLoading(false);
-    }
-  }, [selectedDate]);
+  const habitsQuery = useQuery(appQueries.today(selectedDate));
+  const journalQuery = useQuery(appQueries.journal(selectedDate));
+  const habits = habitsQuery.data ?? [];
+  const journal = journalQuery.data ?? null;
+  const loading = habitsQuery.isPending || journalQuery.isPending;
+  const queryError = habitsQuery.error ?? journalQuery.error;
+  const missingDayData = habitsQuery.data === undefined
+    || journalQuery.data === undefined;
+  const error = queryError instanceof Error && missingDayData
+    ? queryError.message
+    : queryError && missingDayData
+      ? "This day could not be loaded."
+      : "";
 
   useEffect(() => {
-    void loadDay();
-  }, [loadDay]);
+    if (!journalQuery.data || draftDate.current === selectedDate) return;
+    draftDate.current = selectedDate;
+    setDraft({
+      winNote: journalQuery.data.win_note ?? "",
+      reflectionNote: journalQuery.data.reflection_note ?? "",
+    });
+  }, [journalQuery.data, selectedDate]);
 
-  async function toggleHabit(habit: TodayHabit) {
-    if (pendingHabit) return;
-    const previous = habit.todayLog ?? null;
-    const isDone = previous?.status === "done";
-    setPendingHabit(habit.id);
-
-    if (isDone) {
-      setHabits((current) => current.map((item) =>
-        item.id === habit.id ? { ...item, todayLog: null } : item
-      ));
-      try {
+  const toggleHabitMutation = useMutation({
+    mutationFn: async ({
+      habit,
+      remove,
+      date,
+    }: {
+      habit: TodayHabit;
+      remove: boolean;
+      date: string;
+    }) => {
+      if (remove) {
         await apiRequest<{ deleted: boolean }>(
-          `/habits/${habit.id}/logs/${selectedDate}`,
+          `/habits/${habit.id}/logs/${date}`,
           { method: "DELETE" },
         );
-        toast.success("Check-in removed.");
-      } catch (reason) {
-        setHabits((current) => current.map((item) =>
-          item.id === habit.id ? { ...item, todayLog: previous } : item
-        ));
-        toast.error(reason instanceof Error ? reason.message : "The check-in could not be removed.");
-      } finally {
-        setPendingHabit("");
+        return { habitId: habit.id, saved: null, removed: true };
       }
-      return;
-    }
-
-    const optimistic: HabitLog = {
-      id: `optimistic-${habit.id}`,
-      habit_id: habit.id,
-      user_id: profile.id,
-      local_date: selectedDate,
-      status: "done",
-      value: habit.target ?? null,
-      note: null,
-    };
-    setHabits((current) => current.map((item) =>
-      item.id === habit.id ? { ...item, todayLog: optimistic } : item
-    ));
-    try {
-      const saved = await apiRequest<HabitLog>(`/habits/${habit.id}/logs/${selectedDate}`, {
+      const saved = await apiRequest<HabitLog>(`/habits/${habit.id}/logs/${date}`, {
         method: "PUT",
         headers: { "idempotency-key": crypto.randomUUID() },
         body: JSON.stringify({
@@ -105,36 +85,93 @@ export function UserDashboard() {
           prayerStatus: null,
         }),
       });
-      setHabits((current) => current.map((item) =>
-        item.id === habit.id ? { ...item, todayLog: saved } : item
-      ));
-      toast.success("Promise kept. Check-in saved.");
-    } catch (reason) {
-      setHabits((current) => current.map((item) =>
-        item.id === habit.id ? { ...item, todayLog: previous } : item
-      ));
-      toast.error(reason instanceof Error ? reason.message : "The check-in could not be saved.");
-    } finally {
-      setPendingHabit("");
-    }
+      return { habitId: habit.id, saved, removed: false };
+    },
+    onMutate: async ({ habit, remove, date }) => {
+      const queryKey = queryKeys.user.today(date);
+      await queryClient.cancelQueries({ queryKey });
+      const previous = queryClient.getQueryData<TodayHabit[]>(queryKey);
+      const optimistic: HabitLog | null = remove ? null : {
+        id: `optimistic-${habit.id}`,
+        habit_id: habit.id,
+        user_id: profile.id,
+        local_date: date,
+        status: "done",
+        value: habit.target ?? null,
+        note: null,
+      };
+      queryClient.setQueryData<TodayHabit[]>(queryKey, (current = []) =>
+        updateTodayHabitLog(current, habit.id, optimistic));
+      return { previous, queryKey };
+    },
+    onSuccess: ({ habitId, saved, removed }, _variables, context) => {
+      queryClient.setQueryData<TodayHabit[]>(context.queryKey, (current = []) =>
+        updateTodayHabitLog(current, habitId, saved));
+      toast.success(removed ? "Check-in removed." : "Promise kept. Check-in saved.");
+    },
+    onError: (reason, variables, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(context.queryKey, context.previous);
+      }
+      toast.error(reason instanceof Error
+        ? reason.message
+        : variables.remove
+          ? "The check-in could not be removed."
+          : "The check-in could not be saved.");
+    },
+    onSettled: async (_data, _error, _variables, context) => {
+      const invalidations = [
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.user.trackingRoot,
+        }),
+      ];
+      if (context?.queryKey) {
+        invalidations.push(queryClient.invalidateQueries({
+          queryKey: context.queryKey,
+        }));
+      }
+      await Promise.all(invalidations);
+    },
+  });
+
+  const saveJournalMutation = useMutation({
+    mutationFn: ({ date, nextDraft }: {
+      date: string;
+      nextDraft: typeof draft;
+    }) => apiRequest<DailyJournal>(`/journal/${date}`, {
+      method: "PUT",
+      body: JSON.stringify({
+        winNote: nextDraft.winNote || null,
+        reflectionNote: nextDraft.reflectionNote || null,
+      }),
+    }),
+    onSuccess: (saved, { date }) => {
+      queryClient.setQueryData(queryKeys.user.journal(date), saved);
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.user.trackingRoot,
+      });
+      toast.success("Daily reflection saved.");
+    },
+    onError: (reason) => {
+      toast.error(reason instanceof Error ? reason.message : "Your reflection could not be saved.");
+    },
+  });
+
+  function toggleHabit(habit: TodayHabit) {
+    if (toggleHabitMutation.isPending) return;
+    toggleHabitMutation.mutate({
+      habit,
+      remove: habit.todayLog?.status === "done",
+      date: selectedDate,
+    });
   }
 
-  async function saveJournal() {
-    setSavingJournal(true);
-    try {
-      const saved = await apiRequest<DailyJournal>(`/journal/${selectedDate}`, {
-        method: "PUT",
-        body: JSON.stringify({
-          winNote: draft.winNote || null,
-          reflectionNote: draft.reflectionNote || null,
-        }),
+  function saveJournal() {
+    if (!saveJournalMutation.isPending) {
+      saveJournalMutation.mutate({
+        date: selectedDate,
+        nextDraft: draft,
       });
-      setJournal(saved);
-      toast.success("Daily reflection saved.");
-    } catch (reason) {
-      toast.error(reason instanceof Error ? reason.message : "Your reflection could not be saved.");
-    } finally {
-      setSavingJournal(false);
     }
   }
 
@@ -198,7 +235,15 @@ export function UserDashboard() {
         <section className="page-error" role="alert">
           <CircleAlert size={24} />
           <div><strong>We couldn’t open this journal.</strong><span>{error}</span></div>
-          <button type="button" onClick={() => void loadDay()}><RotateCcw size={16} /> Try again</button>
+          <button
+            type="button"
+            onClick={() => void Promise.all([
+              habitsQuery.refetch(),
+              journalQuery.refetch(),
+            ])}
+          >
+            <RotateCcw size={16} /> Try again
+          </button>
         </section>
       ) : (
         <>
@@ -234,7 +279,8 @@ export function UserDashboard() {
               <ol className="promise-list">
                 {habits.map((habit) => {
                   const done = habit.todayLog?.status === "done";
-                  const busy = pendingHabit === habit.id;
+                  const busy = toggleHabitMutation.isPending
+                    && toggleHabitMutation.variables?.habit.id === habit.id;
                   return (
                     <li key={habit.id} className={done ? "is-done" : ""}>
                       <span className="promise-index" aria-hidden="true">{habit.icon}</span>
@@ -244,7 +290,7 @@ export function UserDashboard() {
                         onClick={() => void toggleHabit(habit)}
                         aria-pressed={done}
                         aria-label={done ? `Undo ${habit.name}` : `Mark ${habit.name} complete`}
-                        disabled={Boolean(pendingHabit)}
+                        disabled={toggleHabitMutation.isPending}
                       >
                         <span>
                           <strong>{habit.name}</strong>
@@ -289,10 +335,10 @@ export function UserDashboard() {
             <button
               type="button"
               className="primary-action"
-              disabled={savingJournal || !journalChanged}
-              onClick={() => void saveJournal()}
+              disabled={saveJournalMutation.isPending || !journalChanged}
+              onClick={saveJournal}
             >
-              {savingJournal ? <LoaderCircle className="spin" /> : <Save />}
+              {saveJournalMutation.isPending ? <LoaderCircle className="spin" /> : <Save />}
               {journalChanged ? "Save reflection" : "Reflection saved"}
             </button>
           </section>

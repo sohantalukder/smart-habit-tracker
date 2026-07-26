@@ -1,39 +1,26 @@
 "use client";
 
+import { useQuery } from "@tanstack/react-query";
 import { CircleAlert, Clock3, LoaderCircle, Plus, RotateCcw, Sprout } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import { apiRequest } from "@/lib/api";
-import type { Habit, HabitTemplate, HabitWithReminder } from "@/lib/api/types";
+import type { Habit, HabitWithReminder } from "@/lib/api/types";
+import { appQueries } from "@/lib/queries";
 import { HabitCreateDialog } from "./habit-create-dialog";
 
 export function HabitsPage() {
-  const [habits, setHabits] = useState<HabitWithReminder[]>([]);
-  const [templates, setTemplates] = useState<HabitTemplate[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
   const [showAddHabit, setShowAddHabit] = useState(false);
-
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError("");
-    try {
-      const [nextHabits, nextTemplates] = await Promise.all([
-        apiRequest<HabitWithReminder[]>("/habits"),
-        apiRequest<HabitTemplate[]>("/habit-templates"),
-      ]);
-      setHabits(nextHabits);
-      setTemplates(nextTemplates);
-    } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "Your habits could not be loaded.");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
+  const habitsQuery = useQuery(appQueries.habits());
+  const templatesQuery = useQuery(appQueries.habitTemplates());
+  const habits = habitsQuery.data ?? [];
+  const templates = templatesQuery.data ?? [];
+  const loading = habitsQuery.isPending || templatesQuery.isPending;
+  const queryError = habitsQuery.error ?? templatesQuery.error;
+  const error = queryError instanceof Error
+    ? queryError.message
+    : queryError
+      ? "Your habits could not be loaded."
+      : "";
 
   const activeTemplateIds = useMemo(() => new Set(
     habits
@@ -56,11 +43,19 @@ export function HabitsPage() {
 
       {loading ? (
         <div className="page-loading"><span /><span /><span /></div>
-      ) : error ? (
+      ) : error && (!habitsQuery.data || !templatesQuery.data) ? (
         <section className="page-error" role="alert">
           <CircleAlert />
           <div><strong>We couldn’t load your habits.</strong><span>{error}</span></div>
-          <button type="button" onClick={() => void load()}><RotateCcw /> Try again</button>
+          <button
+            type="button"
+            onClick={() => void Promise.all([
+              habitsQuery.refetch(),
+              templatesQuery.refetch(),
+            ])}
+          >
+            <RotateCcw /> Try again
+          </button>
         </section>
       ) : habits.length === 0 ? (
         <section className="journal-empty habit-library-empty">
@@ -107,7 +102,6 @@ export function HabitsPage() {
         templates={templates}
         activeTemplateIds={activeTemplateIds}
         onCreated={async (_habit: Habit) => {
-          await load();
           toast.success("Habit added to your daily system.");
         }}
       />

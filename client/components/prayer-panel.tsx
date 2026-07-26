@@ -1,49 +1,34 @@
 "use client";
 
+import {
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { BellRing, Check, Clock3, LoaderCircle, RefreshCw } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { apiRequest } from "@/lib/api";
 import { idempotentInit } from "@/lib/api";
-
-type PrayerName = "fajr" | "dhuhr" | "asr" | "maghrib" | "isha";
-type PrayerStatus = "on_time" | "late" | "missed";
-
-type PrayerSchedule = {
-  date: string;
-  timezone: string;
-  madhab: string;
-  calculationMethod: string;
-  prayers: Array<{
-    name: PrayerName;
-    time: string;
-    status: PrayerStatus | null;
-  }>;
-  nextPrayer: { name: PrayerName; time: string } | null;
-};
+import {
+  appQueries,
+  queryKeys,
+  type PrayerName,
+  type PrayerSchedule,
+  type PrayerStatus,
+} from "@/lib/queries";
 
 export function PrayerPanel({ localDate }: { localDate: string }) {
-  const [schedule, setSchedule] = useState<PrayerSchedule | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState("");
-  const [error, setError] = useState("");
+  const queryClient = useQueryClient();
+  const scheduleQuery = useQuery(appQueries.prayer(localDate));
+  const schedule = scheduleQuery.data ?? null;
+  const loading = scheduleQuery.isPending;
+  const error = scheduleQuery.error instanceof Error && !scheduleQuery.data
+    ? scheduleQuery.error.message
+    : scheduleQuery.error && !scheduleQuery.data
+      ? "Prayer times could not be loaded."
+      : "";
   const [now, setNow] = useState(() => Date.now());
-
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError("");
-    try {
-      setSchedule(await apiRequest<PrayerSchedule>(`/prayer-times?date=${localDate}`));
-    } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "Prayer times could not be loaded.");
-    } finally {
-      setLoading(false);
-    }
-  }, [localDate]);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
 
   useEffect(() => {
     const timer = window.setInterval(() => setNow(Date.now()), 30_000);
@@ -57,24 +42,38 @@ export function PrayerPanel({ localDate }: { localDate: string }) {
     [now, schedule?.nextPrayer],
   );
 
-  async function setStatus(prayer: PrayerName, status: PrayerStatus) {
-    setSaving(prayer);
-    try {
-      await apiRequest(
+  const statusMutation = useMutation({
+    mutationFn: ({ prayer, status }: {
+      prayer: PrayerName;
+      status: PrayerStatus;
+    }) =>
+      apiRequest(
         `/prayers/${prayer}/logs/${localDate}`,
         idempotentInit("PUT", { status }),
-      );
-      setSchedule((current) => current ? {
+      ),
+    onSuccess: (_result, { prayer, status }) => {
+      queryClient.setQueryData<PrayerSchedule>(
+        queryKeys.user.prayer(localDate),
+        (current) => current ? {
         ...current,
         prayers: current.prayers.map((item) =>
           item.name === prayer ? { ...item, status } : item
         ),
-      } : current);
+      } : current,
+      );
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.user.prayer(localDate),
+      });
       toast.success(`${titleCase(prayer)} recorded as ${status.replace("_", " ")}.`);
-    } catch (reason) {
+    },
+    onError: (reason) => {
       toast.error(reason instanceof Error ? reason.message : "Prayer status could not be saved.");
-    } finally {
-      setSaving("");
+    },
+  });
+
+  function setStatus(prayer: PrayerName, status: PrayerStatus) {
+    if (!statusMutation.isPending) {
+      statusMutation.mutate({ prayer, status });
     }
   }
 
@@ -98,7 +97,7 @@ export function PrayerPanel({ localDate }: { localDate: string }) {
       ) : error || !schedule ? (
         <div className="prayer-error">
           <span>{error || "Prayer setup is incomplete."}</span>
-          <button onClick={() => void load()}><RefreshCw size={14} /> Retry</button>
+          <button onClick={() => void scheduleQuery.refetch()}><RefreshCw size={14} /> Retry</button>
         </div>
       ) : (
         <>
@@ -120,8 +119,9 @@ export function PrayerPanel({ localDate }: { localDate: string }) {
                       <button
                         type="button"
                         className={prayer.status === status ? "selected" : ""}
-                        disabled={saving === prayer.name}
-                        onClick={() => void setStatus(prayer.name, status)}
+                        disabled={statusMutation.isPending
+                          && statusMutation.variables?.prayer === prayer.name}
+                        onClick={() => setStatus(prayer.name, status)}
                         key={status}
                       >
                         {prayer.status === status && <Check size={11} />}

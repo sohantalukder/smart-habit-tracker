@@ -5,6 +5,7 @@ import "./globals.css";
 import "./bloom.css";
 import { Toaster } from "@/components/ui/sonner";
 import { ServiceWorkerRegistration } from "@/components/service-worker-registration";
+import { AppProviders } from "./providers";
 
 const newsreader = Newsreader({
   subsets: ["latin"],
@@ -47,9 +48,11 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
       <body className={`${newsreader.variable} ${manrope.variable}`}>
-        {children}
-        <ServiceWorkerRegistration />
-        <Toaster />
+        <AppProviders>
+          {children}
+          <ServiceWorkerRegistration />
+          <Toaster />
+        </AppProviders>
       </body>
     </html>
   );

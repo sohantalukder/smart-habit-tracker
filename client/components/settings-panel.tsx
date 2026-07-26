@@ -1,6 +1,10 @@
 "use client";
 
 import {
+  useMutation,
+  useQueryClient,
+} from "@tanstack/react-query";
+import {
   Bell,
   BellOff,
   Check,
@@ -28,6 +32,7 @@ import {
   enablePushNotifications,
   unregisterPushNotifications,
 } from "@/lib/firebase-messaging";
+import { queryKeys } from "@/lib/queries";
 
 const allGoals: GoalPreference[] = [
   "movement",
@@ -55,12 +60,11 @@ const methods = [
 export function SettingsPanel({
   profile,
   habits,
-  onSaved,
 }: {
   profile: ExperienceProfile;
   habits: HabitWithReminder[];
-  onSaved: () => Promise<void>;
 }) {
+  const queryClient = useQueryClient();
   const [goals, setGoals] = useState<GoalPreference[]>(
     profile.goal_preferences?.length
       ? profile.goal_preferences
@@ -99,9 +103,8 @@ export function SettingsPanel({
     }),
   );
   const [pushState, setPushState] = useState(currentPushState());
-  const [saving, setSaving] = useState(false);
+  const [pushSaving, setPushSaving] = useState(false);
   const [locating, setLocating] = useState(false);
-  const [reminderSaving, setReminderSaving] = useState("");
   const [habitTimes, setHabitTimes] = useState<Record<string, string>>(() =>
     Object.fromEntries(
       habits.map((habit) => [habit.id, habit.reminder_time?.slice(0, 5) ?? ""]),
@@ -114,6 +117,44 @@ export function SettingsPanel({
       : "Location is required for prayer times",
     [location],
   );
+  const preferencesMutation = useMutation({
+    mutationFn: (payload: Record<string, unknown>) =>
+      apiRequest("/preferences", {
+        method: "PUT",
+        body: JSON.stringify(payload),
+      }),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: queryKeys.user.profile }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.user.habits }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.user.prayerRoot }),
+      ]);
+      toast.success("Preferences and future reminders were updated.");
+    },
+    onError: (reason) => {
+      toast.error(reason instanceof Error ? reason.message : "Preferences could not be saved.");
+    },
+  });
+  const reminderMutation = useMutation({
+    mutationFn: ({ habit, time }: {
+      habit: HabitWithReminder;
+      time: string;
+    }) => apiRequest(`/habits/${habit.id}/reminder`, {
+      method: "PUT",
+      body: JSON.stringify(time
+        ? { enabled: true, time }
+        : { enabled: false, time: null }),
+    }),
+    onSuccess: async (_result, { habit, time }) => {
+      await queryClient.invalidateQueries({
+        queryKey: queryKeys.user.habits,
+      });
+      toast.success(time ? `${habit.name} reminder saved.` : `${habit.name} reminder removed.`);
+    },
+    onError: (reason) => {
+      toast.error(reason instanceof Error ? reason.message : "Habit reminder could not be saved.");
+    },
+  });
 
   function refreshLocation() {
     if (!navigator.geolocation) {
@@ -139,7 +180,7 @@ export function SettingsPanel({
     );
   }
 
-  async function savePreferences() {
+  function savePreferences() {
     if (!goals.length) {
       toast.error("Choose at least one goal.");
       return;
@@ -148,41 +189,29 @@ export function SettingsPanel({
       toast.error("Location is required for prayer times.");
       return;
     }
-    setSaving(true);
-    try {
-      await apiRequest("/preferences", {
-        method: "PUT",
-        body: JSON.stringify({
-          goals,
-          pace,
-          religion,
-          dailyDigestTime: digestTime,
-          dailyDigestEnabled: digestEnabled,
-          prayerSetup: religion === "muslim" && location
-            ? {
-                ...location,
-                madhab,
-                calculationMethod: method,
-                reminders: prayerReminders.map((setting) => ({
-                  prayer: setting.prayer_name,
-                  enabled: setting.enabled,
-                  offsetMinutes: setting.offset_minutes,
-                })),
-              }
-            : null,
-        }),
-      });
-      await onSaved();
-      toast.success("Preferences and future reminders were updated.");
-    } catch (reason) {
-      toast.error(reason instanceof Error ? reason.message : "Preferences could not be saved.");
-    } finally {
-      setSaving(false);
-    }
+    preferencesMutation.mutate({
+      goals,
+      pace,
+      religion,
+      dailyDigestTime: digestTime,
+      dailyDigestEnabled: digestEnabled,
+      prayerSetup: religion === "muslim" && location
+        ? {
+            ...location,
+            madhab,
+            calculationMethod: method,
+            reminders: prayerReminders.map((setting) => ({
+              prayer: setting.prayer_name,
+              enabled: setting.enabled,
+              offsetMinutes: setting.offset_minutes,
+            })),
+          }
+        : null,
+    });
   }
 
   async function togglePush() {
-    setSaving(true);
+    setPushSaving(true);
     if (pushState === "enabled") {
       await unregisterPushNotifications();
       setPushState("prompt");
@@ -193,25 +222,13 @@ export function SettingsPanel({
       if (next === "enabled") toast.success("Push notifications are enabled.");
       else toast.error("Push notifications could not be enabled in this browser.");
     }
-    setSaving(false);
+    setPushSaving(false);
   }
 
-  async function saveHabitReminder(habit: HabitWithReminder) {
+  function saveHabitReminder(habit: HabitWithReminder) {
     const time = habitTimes[habit.id] ?? "";
-    setReminderSaving(habit.id);
-    try {
-      await apiRequest(`/habits/${habit.id}/reminder`, {
-        method: "PUT",
-        body: JSON.stringify(time
-          ? { enabled: true, time }
-          : { enabled: false, time: null }),
-      });
-      await onSaved();
-      toast.success(time ? `${habit.name} reminder saved.` : `${habit.name} reminder removed.`);
-    } catch (reason) {
-      toast.error(reason instanceof Error ? reason.message : "Habit reminder could not be saved.");
-    } finally {
-      setReminderSaving("");
+    if (!reminderMutation.isPending) {
+      reminderMutation.mutate({ habit, time });
     }
   }
 
@@ -257,7 +274,7 @@ export function SettingsPanel({
             Daily incomplete-habits digest
           </label>
           <Input type="time" disabled={!digestEnabled} value={digestTime} onChange={(event) => setDigestTime(event.target.value)} />
-          <button type="button" className="settings-push" disabled={saving} onClick={() => void togglePush()}>
+          <button type="button" className="settings-push" disabled={pushSaving} onClick={() => void togglePush()}>
             {pushState === "enabled" ? <BellOff /> : <Bell />}
             <span>
               <strong>{pushState === "enabled" ? "Disable push on this browser" : "Enable Firebase push"}</strong>
@@ -360,10 +377,14 @@ export function SettingsPanel({
                 />
                 <Button
                   variant="secondary"
-                  disabled={reminderSaving === habit.id}
-                  onClick={() => void saveHabitReminder(habit)}
+                  disabled={reminderMutation.isPending
+                    && reminderMutation.variables?.habit.id === habit.id}
+                  onClick={() => saveHabitReminder(habit)}
                 >
-                  {reminderSaving === habit.id ? <LoaderCircle className="spin" /> : <Save />}
+                  {reminderMutation.isPending
+                    && reminderMutation.variables?.habit.id === habit.id
+                    ? <LoaderCircle className="spin" />
+                    : <Save />}
                   Save
                 </Button>
               </div>
@@ -373,8 +394,8 @@ export function SettingsPanel({
       </div>
 
       <footer className="settings-save">
-        <Button disabled={saving} onClick={() => void savePreferences()}>
-          {saving ? <LoaderCircle className="spin" /> : <Save />}
+        <Button disabled={preferencesMutation.isPending} onClick={savePreferences}>
+          {preferencesMutation.isPending ? <LoaderCircle className="spin" /> : <Save />}
           Save preferences
         </Button>
       </footer>

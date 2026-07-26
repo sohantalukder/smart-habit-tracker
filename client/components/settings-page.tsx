@@ -1,33 +1,21 @@
 "use client";
 
+import { useQuery } from "@tanstack/react-query";
 import { CircleAlert, RotateCcw } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
-import { apiRequest } from "@/lib/api";
-import type { HabitWithReminder } from "@/lib/api/types";
+import { appQueries } from "@/lib/queries";
 import { SettingsPanel } from "./settings-panel";
 import { useDashboardShell } from "./dashboard-shell";
 
 export function SettingsPage() {
-  const { profile, refreshProfile } = useDashboardShell();
-  const [habits, setHabits] = useState<HabitWithReminder[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-
-  const loadHabits = useCallback(async () => {
-    setLoading(true);
-    setError("");
-    try {
-      setHabits(await apiRequest<HabitWithReminder[]>("/habits"));
-    } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "Reminder settings could not be loaded.");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    void loadHabits();
-  }, [loadHabits]);
+  const { profile } = useDashboardShell();
+  const habitsQuery = useQuery(appQueries.habits());
+  const habits = habitsQuery.data ?? [];
+  const loading = habitsQuery.isPending;
+  const error = habitsQuery.error instanceof Error && !habitsQuery.data
+    ? habitsQuery.error.message
+    : habitsQuery.error && !habitsQuery.data
+      ? "Reminder settings could not be loaded."
+      : "";
 
   return (
     <div className="page-stack">
@@ -44,15 +32,12 @@ export function SettingsPage() {
         <section className="page-error" role="alert">
           <CircleAlert />
           <div><strong>We couldn’t load your settings.</strong><span>{error}</span></div>
-          <button type="button" onClick={() => void loadHabits()}><RotateCcw /> Try again</button>
+          <button type="button" onClick={() => void habitsQuery.refetch()}><RotateCcw /> Try again</button>
         </section>
       ) : (
         <SettingsPanel
           profile={profile}
           habits={habits}
-          onSaved={async () => {
-            await Promise.all([refreshProfile(), loadHabits()]);
-          }}
         />
       )}
     </div>

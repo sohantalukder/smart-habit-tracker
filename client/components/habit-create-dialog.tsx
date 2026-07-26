@@ -1,5 +1,9 @@
 "use client";
 
+import {
+  useMutation,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { Check, LoaderCircle, Plus, Sparkles, Sprout } from "lucide-react";
 import { useMemo, useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
@@ -23,6 +27,7 @@ import {
   type HabitTrackingType,
   validateHabitDraft,
 } from "@/lib/habit-form";
+import { queryKeys } from "@/lib/queries";
 
 type Mode = "suggestions" | "custom";
 
@@ -84,6 +89,7 @@ export function HabitCreateDialog({
   activeTemplateIds: Set<string>;
   onCreated: (habit: Habit) => Promise<void>;
 }) {
+  const queryClient = useQueryClient();
   const [mode, setMode] = useState<Mode>("suggestions");
   const [draft, setDraft] = useState<HabitDraft>(initialDraft);
   const [submitting, setSubmitting] = useState("");
@@ -93,6 +99,20 @@ export function HabitCreateDialog({
     () => templates.filter((template) => Boolean(template.id)),
     [templates],
   );
+  const createHabitMutation = useMutation({
+    mutationFn: (payload: { templateId: string } | ReturnType<typeof buildCustomHabitPayload>) =>
+      apiRequest<Habit>("/habits", {
+        method: "POST",
+        body: JSON.stringify(payload),
+      }),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: queryKeys.user.habits }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.user.todayRoot }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.user.trackingRoot }),
+      ]);
+    },
+  });
 
   function close(nextOpen: boolean) {
     if (submitting) return;
@@ -105,9 +125,8 @@ export function HabitCreateDialog({
     setSubmitting(template.id);
     setError("");
     try {
-      const habit = await apiRequest<Habit>("/habits", {
-        method: "POST",
-        body: JSON.stringify({ templateId: template.id }),
+      const habit = await createHabitMutation.mutateAsync({
+        templateId: template.id,
       });
       await onCreated(habit);
       onOpenChange(false);
@@ -133,10 +152,9 @@ export function HabitCreateDialog({
     setSubmitting("custom");
     setError("");
     try {
-      const habit = await apiRequest<Habit>("/habits", {
-        method: "POST",
-        body: JSON.stringify(buildCustomHabitPayload(draft)),
-      });
+      const habit = await createHabitMutation.mutateAsync(
+        buildCustomHabitPayload(draft),
+      );
       await onCreated(habit);
       setDraft(initialDraft);
       onOpenChange(false);

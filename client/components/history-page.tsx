@@ -1,5 +1,6 @@
 "use client";
 
+import { useQuery } from "@tanstack/react-query";
 import {
   CalendarRange,
   CircleAlert,
@@ -8,10 +9,9 @@ import {
   LoaderCircle,
   RotateCcw,
 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { apiRequest } from "@/lib/api";
-import type { TrackingReport } from "@/lib/api/types";
+import { useMemo, useState } from "react";
 import { localDateString } from "@/lib/dashboard";
+import { appQueries } from "@/lib/queries";
 import {
   offsetLocalDate,
   trackingCsv,
@@ -25,33 +25,21 @@ export function HistoryPage() {
   const [preset, setPreset] = useState<Preset>("week");
   const [from, setFrom] = useState(() => offsetLocalDate(today, -6));
   const [to, setTo] = useState(today);
-  const [report, setReport] = useState<TrackingReport | null>(null);
-  const [loading, setLoading] = useState(true);
   const [downloading, setDownloading] = useState<"" | "csv" | "pdf">("");
-  const [error, setError] = useState("");
-
-  const load = useCallback(async () => {
-    if (!from || !to || from > to) {
-      setError("Choose a valid start and end date.");
-      setReport(null);
-      setLoading(false);
-      return;
-    }
-    setLoading(true);
-    setError("");
-    try {
-      setReport(await apiRequest<TrackingReport>(`/tracking?from=${from}&to=${to}`));
-    } catch (reason) {
-      setReport(null);
-      setError(reason instanceof Error ? reason.message : "Your tracking history could not be loaded.");
-    } finally {
-      setLoading(false);
-    }
-  }, [from, to]);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
+  const validRange = Boolean(from && to && from <= to);
+  const reportQuery = useQuery({
+    ...appQueries.tracking(from, to),
+    enabled: validRange,
+  });
+  const report = reportQuery.data ?? null;
+  const loading = validRange && reportQuery.isPending;
+  const error = !validRange
+    ? "Choose a valid start and end date."
+    : reportQuery.error instanceof Error && !reportQuery.data
+      ? reportQuery.error.message
+      : reportQuery.error && !reportQuery.data
+        ? "Your tracking history could not be loaded."
+        : "";
 
   function choosePreset(next: Preset) {
     setPreset(next);
@@ -178,7 +166,7 @@ export function HistoryPage() {
         <section className="page-error" role="alert">
           <CircleAlert />
           <div><strong>We couldn’t build this report.</strong><span>{error}</span></div>
-          <button type="button" onClick={() => void load()}><RotateCcw /> Try again</button>
+          <button type="button" onClick={() => void reportQuery.refetch()}><RotateCcw /> Try again</button>
         </section>
       ) : report ? (
         <>
