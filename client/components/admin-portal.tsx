@@ -123,16 +123,16 @@ export function AdminPortal({ support }: { support: SupportSession }) {
   );
 
   return <div className="admin-shell">
-    <aside className={sidebar ? "open" : ""}>
-      <button className="admin-close" onClick={() => setSidebar(false)} aria-label="Close navigation"><X size={19}/></button>
+    <aside className={sidebar ? "open" : ""} aria-label="Admin navigation">
+      <button type="button" className="admin-close" onClick={() => setSidebar(false)} aria-label="Close navigation"><X size={19}/></button>
       <div className="admin-brand"><span><Sprout size={20}/></span><div><strong>Bloom</strong><small>ADMIN PORTAL</small></div></div>
-      <nav>{nav.map((item) => { const Icon = item.icon; return <button key={item.id} aria-current={page === item.id ? "page" : undefined} className={page === item.id ? "active" : ""} onClick={() => { setPage(item.id); setSidebar(false); window.history.replaceState(null, "", `/admin?section=${item.id}`); }}><Icon size={18}/>{item.label}</button>; })}</nav>
+      <nav aria-label="Admin sections">{nav.map((item) => { const Icon = item.icon; return <button type="button" key={item.id} aria-current={page === item.id ? "page" : undefined} className={page === item.id ? "active" : ""} onClick={() => { setPage(item.id); setSidebar(false); window.history.replaceState(null, "", `/admin?section=${item.id}`); }}><Icon size={18}/><span>{item.label}</span></button>; })}</nav>
       <div className="support-profile"><span>{initials(support.name)}</span><div><strong>{support.name || support.email}</strong><small>{accessLabel} · {canManage ? "Full management" : "Read and restrict"}</small></div></div>
     </aside>
     {sidebar && <button className="admin-scrim" onClick={() => setSidebar(false)} aria-label="Close navigation"/>}
 
     <main className="admin-main">
-      <header><button className="admin-menu" onClick={() => setSidebar(true)} aria-label="Open navigation"><Menu size={20}/></button><strong>Bloom workspace</strong><label className="admin-search"><Search size={15}/><input value={query} onFocus={() => setPage("users")} onChange={(event) => { setQuery(event.target.value); setUserPage(1); setPage("users"); }} placeholder="Search users by name or email" aria-label="Search users"/></label><Badge tone="success">{accessLabel.toUpperCase()}</Badge><span className="header-avatar" aria-label={`${accessLabel} profile`}>{initials(support.name)}</span></header>
+      <header className="admin-topbar"><button type="button" className="admin-menu" onClick={() => setSidebar(true)} aria-label="Open navigation"><Menu size={20}/></button><strong className="admin-workspace">Bloom workspace</strong><label className="admin-search"><Search size={17}/><input value={query} onFocus={() => setPage("users")} onChange={(event) => { setQuery(event.target.value); setUserPage(1); setPage("users"); }} placeholder="Search users by name or email" aria-label="Search users"/></label><Badge tone="success">{accessLabel.toUpperCase()}</Badge><span className="header-avatar" aria-label={`${accessLabel} profile`}>{initials(support.name)}</span></header>
       <div className="admin-page">
         <AdminHeading
           eyebrow={page === "overview" ? "OPERATIONS OVERVIEW" : "BLOOM SUPPORT"}
@@ -182,7 +182,7 @@ function Overview({ analytics }: { analytics: AdminAnalytics }) {
     ["Active habits", analytics.activeHabits, Activity, "amber"],
     ["Delivered", analytics.deliveredNotifications, Send, "blue"],
   ] as const;
-  return <div className="admin-stats">{stats.map(([label,value,Icon,tone]) => <Card key={label}><span className={`stat-mark ${tone}`}><Icon size={19}/></span><div><p>{label}</p><h2>{value}</h2><small>Live workspace summary</small></div></Card>)}</div>;
+  return <section className="admin-stats" aria-label="Workspace metrics">{stats.map(([label,value,Icon,tone]) => <Card key={label}><span className={`stat-mark ${tone}`}><Icon size={19}/></span><div><p>{label}</p><h2>{value}</h2><small>Live workspace summary</small></div></Card>)}</section>;
 }
 
 function UsersPanel({ users, query, setQuery, refresh, support, canManage, count, page, pageSize, setPage }: { users: AdminUser[]; query: string; setQuery: (value: string) => void; refresh: () => void; support: SupportSession; canManage: boolean; count: number; page: number; pageSize: number; setPage: (page: number) => void }) {
@@ -257,7 +257,7 @@ function UsersPanel({ users, query, setQuery, refresh, support, canManage, count
           <table>
             <thead><tr><th>USER</th><th>ROLE</th><th>TIMEZONE</th><th>JOINED</th><th>STATUS</th><th>ACTIONS</th></tr></thead>
             <tbody>{users.map((user) => <tr key={user.id}>
-              <td><span className="table-avatar">{initials(user.name)}</span><div><strong>{user.name || "Unnamed user"}</strong><small>{user.email}</small></div></td>
+              <td><div className="table-user"><span className="table-avatar">{initials(user.name)}</span><div><strong>{user.name || "Unnamed user"}</strong><small>{user.email}</small></div></div></td>
               <td>
                 {canManage ? (
                   <select
@@ -401,7 +401,7 @@ function EmptyState({ icon, title, description }: { icon?: React.ReactNode; titl
   return <div className="ui-empty">{icon}<strong>{title}</strong><p>{description}</p></div>;
 }
 function LoadingPanel() {
-  return <div className="loading-panel"><i/><i/><i/></div>;
+  return <div className="loading-panel" role="status" aria-label="Loading admin data"><i/><i/><i/></div>;
 }
 function initials(name: string) {
   return name ? name.split(" ").slice(0,2).map((part)=>part[0]).join("").toUpperCase() : "SU";
