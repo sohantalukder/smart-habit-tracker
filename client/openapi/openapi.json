@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Bloom Smart Habit REST API",
-    "version": "1.1.0",
+    "version": "1.2.0",
     "description": "Versioned API contract for web and native mobile clients."
   },
   "servers": [
@@ -471,6 +471,157 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/HabitLog"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      },
+      "delete": {
+        "operationId": "removeHabitCheckIn",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/HabitId"
+          },
+          {
+            "name": "localDate",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Daily check-in removed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "deleted"
+                  ],
+                  "properties": {
+                    "deleted": {
+                      "type": "boolean",
+                      "const": true
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/journal/{localDate}": {
+      "get": {
+        "operationId": "getDailyJournal",
+        "parameters": [
+          {
+            "name": "localDate",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Daily reflection for the selected date.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DailyJournal"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      },
+      "put": {
+        "operationId": "saveDailyJournal",
+        "parameters": [
+          {
+            "name": "localDate",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DailyJournalInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Daily reflection saved.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DailyJournal"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/tracking": {
+      "get": {
+        "operationId": "getTrackingReport",
+        "parameters": [
+          {
+            "name": "from",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Tracking report for a range of up to 366 days.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TrackingReport"
                 }
               }
             }
@@ -1850,6 +2001,229 @@
           }
         },
         "additionalProperties": true
+      },
+      "DailyJournalInput": {
+        "type": "object",
+        "properties": {
+          "winNote": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 1000
+          },
+          "reflectionNote": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 1000
+          }
+        }
+      },
+      "DailyJournal": {
+        "type": "object",
+        "required": [
+          "id",
+          "user_id",
+          "local_date",
+          "win_note",
+          "reflection_note"
+        ],
+        "properties": {
+          "id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "user_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "local_date": {
+            "type": "string",
+            "format": "date"
+          },
+          "win_note": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "reflection_note": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "TrackingHabit": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "icon",
+          "habit_type",
+          "target",
+          "unit",
+          "status",
+          "value",
+          "note"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "icon": {
+            "type": "string"
+          },
+          "habit_type": {
+            "type": "string",
+            "enum": [
+              "do",
+              "avoid",
+              "count",
+              "duration"
+            ]
+          },
+          "target": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "unit": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "done",
+              "skipped",
+              "partial",
+              "not_checked"
+            ]
+          },
+          "value": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "note": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "TrackingDay": {
+        "type": "object",
+        "required": [
+          "date",
+          "completed",
+          "scheduled",
+          "completionRate",
+          "winNote",
+          "reflectionNote",
+          "habits"
+        ],
+        "properties": {
+          "date": {
+            "type": "string",
+            "format": "date"
+          },
+          "completed": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "scheduled": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "completionRate": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 100
+          },
+          "winNote": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "reflectionNote": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "habits": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TrackingHabit"
+            }
+          }
+        }
+      },
+      "TrackingReport": {
+        "type": "object",
+        "required": [
+          "from",
+          "to",
+          "totalCompleted",
+          "totalScheduled",
+          "completionRate",
+          "days"
+        ],
+        "properties": {
+          "from": {
+            "type": "string",
+            "format": "date"
+          },
+          "to": {
+            "type": "string",
+            "format": "date"
+          },
+          "totalCompleted": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "totalScheduled": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "completionRate": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 100
+          },
+          "days": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TrackingDay"
+            }
+          }
+        }
       },
       "NotificationDelivery": {
         "type": "object",

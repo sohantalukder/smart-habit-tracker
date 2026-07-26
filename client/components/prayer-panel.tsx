@@ -83,7 +83,14 @@ export function PrayerPanel({ localDate }: { localDate: string }) {
       <div className="honest-section-title">
         <div><p>PRAYER TIMES</p><h2 id="prayer-panel-title">Today’s prayers</h2></div>
         {schedule?.nextPrayer && (
-          <span><Clock3 size={14} /> {titleCase(schedule.nextPrayer.name)} in {countdown}</span>
+          <span className="next-prayer-badge">
+            <Clock3 aria-hidden="true" />
+            <span>
+              <small>Next prayer</small>
+              <strong>{titleCase(schedule.nextPrayer.name)}</strong>
+            </span>
+            <time dateTime={schedule.nextPrayer.time}>in {countdown}</time>
+          </span>
         )}
       </div>
       {loading ? (
@@ -148,7 +155,8 @@ function countdownLabel(milliseconds: number) {
   const totalMinutes = Math.max(1, Math.ceil(milliseconds / 60_000));
   const hours = Math.floor(totalMinutes / 60);
   const minutes = totalMinutes % 60;
-  return hours ? `${hours}h ${minutes}m` : `${minutes}m`;
+  if (!hours) return `${minutes}m`;
+  return minutes ? `${hours}h ${minutes}m` : `${hours}h`;
 }
 
 function titleCase(value: string) {

@@ -54,6 +54,10 @@ export const checkInSchema = z.object({
   note: z.string().max(1000).nullable().default(null),
   prayerStatus: z.enum(["on_time", "late", "missed"]).nullable().default(null),
 });
+export const journalSchema = z.object({
+  winNote: z.string().trim().max(1000).nullable().default(null),
+  reflectionNote: z.string().trim().max(1000).nullable().default(null),
+});
 export const goalPreferenceSchema = z.enum([
   "movement",
   "nutrition",
@@ -168,6 +172,7 @@ export type SignupInput = z.infer<typeof signupSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
 export type CreateHabitInput = z.infer<typeof createHabitSchema>;
 export type CheckInInput = z.infer<typeof checkInSchema>;
+export type JournalInput = z.infer<typeof journalSchema>;
 export type OnboardingInput = z.infer<typeof onboardingSchema>;
 export type PreferencesInput = z.infer<typeof preferencesSchema>;
 export type PrayerCheckInInput = z.infer<typeof prayerCheckInSchema>;

@@ -18,6 +18,8 @@ const requiredPaths = [
   "/prayer-times",
   "/prayers/{prayer}/logs/{localDate}",
   "/habits/{habitId}/reminder",
+  "/journal/{localDate}",
+  "/tracking",
   "/push/installations",
 ];
 if (requiredPaths.some((path) => !document.paths?.[path])) {

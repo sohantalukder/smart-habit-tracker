@@ -1,360 +1,321 @@
 "use client";
 
 import {
-  Bell,
+  CalendarDays,
   Check,
+  ChevronLeft,
+  ChevronRight,
   CircleAlert,
-  Inbox,
-  Leaf,
   LoaderCircle,
-  LogOut,
-  Plus,
-  RefreshCw,
-  ShieldCheck,
-  Settings,
-  Sprout,
+  RotateCcw,
+  Save,
+  Sparkles,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { HabitCreateDialog } from "./habit-create-dialog";
-import { apiRequest } from "../lib/api";
-import type {
-  HabitLog,
-  HabitTemplate,
-  NotificationDelivery,
-  TodayHabit,
-} from "../lib/api/types";
-import type {
-  ExperienceProfile,
-  HabitWithReminder,
-} from "../lib/api/types";
-import {
-  habitProgress,
-  habitProgressLabel,
-  localDateString,
-  profileDisplayName,
-} from "../lib/dashboard";
-import { PrayerPanel } from "./prayer-panel";
-import { SettingsPanel } from "./settings-panel";
-import { unregisterPushNotifications } from "@/lib/firebase-messaging";
-
-type DashboardData = {
-  profile: ExperienceProfile;
-  habits: TodayHabit[];
-  allHabits: HabitWithReminder[];
-  templates: HabitTemplate[];
-  notifications: NotificationDelivery[];
-};
+import { apiRequest } from "@/lib/api";
+import type { DailyJournal, HabitLog, TodayHabit } from "@/lib/api/types";
+import { localDateString } from "@/lib/dashboard";
+import { useDashboardShell } from "./dashboard-shell";
 
 export function UserDashboard() {
-  const [data, setData] = useState<DashboardData | null>(null);
+  const { profile } = useDashboardShell();
+  const [selectedDate, setSelectedDate] = useState(() => localDateString());
+  const [habits, setHabits] = useState<TodayHabit[]>([]);
+  const [journal, setJournal] = useState<DailyJournal | null>(null);
+  const [draft, setDraft] = useState({ winNote: "", reflectionNote: "" });
   const [loading, setLoading] = useState(true);
+  const [savingJournal, setSavingJournal] = useState(false);
+  const [pendingHabit, setPendingHabit] = useState("");
   const [error, setError] = useState("");
-  const [signingOut, setSigningOut] = useState(false);
-  const [showAddHabit, setShowAddHabit] = useState(false);
-  const localDate = useMemo(() => localDateString(), []);
+  const today = localDateString();
 
-  const loadDashboard = useCallback(async () => {
+  const loadDay = useCallback(async () => {
     setLoading(true);
     setError("");
     try {
-      const [profile, habits, allHabits, templates, notifications] = await Promise.all([
-        apiRequest<ExperienceProfile>("/profile"),
-        apiRequest<TodayHabit[]>(`/today?date=${localDate}`),
-        apiRequest<HabitWithReminder[]>("/habits"),
-        apiRequest<HabitTemplate[]>("/habit-templates"),
-        apiRequest<NotificationDelivery[]>("/notifications"),
+      const [nextHabits, nextJournal] = await Promise.all([
+        apiRequest<TodayHabit[]>(`/today?date=${selectedDate}`),
+        apiRequest<DailyJournal>(`/journal/${selectedDate}`),
       ]);
-      setData({ profile, habits, allHabits, templates, notifications });
-    } catch (requestError) {
-      setData(null);
-      setError(
-        requestError instanceof Error
-          ? requestError.message
-          : "Your private space could not be loaded.",
-      );
+      setHabits(nextHabits);
+      setJournal(nextJournal);
+      setDraft({
+        winNote: nextJournal.win_note ?? "",
+        reflectionNote: nextJournal.reflection_note ?? "",
+      });
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "This day could not be loaded.");
     } finally {
       setLoading(false);
     }
-  }, [localDate]);
-
-  async function refreshHabits() {
-    const [habits, allHabits, templates] = await Promise.all([
-      apiRequest<TodayHabit[]>(`/today?date=${localDate}`),
-      apiRequest<HabitWithReminder[]>("/habits"),
-      apiRequest<HabitTemplate[]>("/habit-templates"),
-    ]);
-    setData((current) => current
-      ? { ...current, habits, allHabits, templates }
-      : current);
-  }
+  }, [selectedDate]);
 
   useEffect(() => {
-    void loadDashboard();
-  }, [loadDashboard]);
-
-  useEffect(() => {
-    const refreshNotifications = async () => {
-      const notifications = await apiRequest<NotificationDelivery[]>("/notifications")
-        .catch(() => null);
-      if (notifications) {
-        setData((current) => current ? { ...current, notifications } : current);
-      }
-    };
-    window.addEventListener("bloom:notification", refreshNotifications);
-    return () => window.removeEventListener("bloom:notification", refreshNotifications);
-  }, []);
+    void loadDay();
+  }, [loadDay]);
 
   async function toggleHabit(habit: TodayHabit) {
-    if (!data) return;
+    if (pendingHabit) return;
     const previous = habit.todayLog ?? null;
-    const nextStatus = previous?.status === "done" ? "skipped" : "done";
+    const isDone = previous?.status === "done";
+    setPendingHabit(habit.id);
+
+    if (isDone) {
+      setHabits((current) => current.map((item) =>
+        item.id === habit.id ? { ...item, todayLog: null } : item
+      ));
+      try {
+        await apiRequest<{ deleted: boolean }>(
+          `/habits/${habit.id}/logs/${selectedDate}`,
+          { method: "DELETE" },
+        );
+        toast.success("Check-in removed.");
+      } catch (reason) {
+        setHabits((current) => current.map((item) =>
+          item.id === habit.id ? { ...item, todayLog: previous } : item
+        ));
+        toast.error(reason instanceof Error ? reason.message : "The check-in could not be removed.");
+      } finally {
+        setPendingHabit("");
+      }
+      return;
+    }
+
     const optimistic: HabitLog = {
-      id: previous?.id ?? `optimistic-${habit.id}`,
+      id: `optimistic-${habit.id}`,
       habit_id: habit.id,
-      user_id: data.profile.id,
-      local_date: localDate,
-      status: nextStatus,
-      value: nextStatus === "done" ? habit.target ?? null : null,
+      user_id: profile.id,
+      local_date: selectedDate,
+      status: "done",
+      value: habit.target ?? null,
       note: null,
     };
-
-    setData((current) => current ? {
-      ...current,
-      habits: current.habits.map((item) =>
-        item.id === habit.id ? { ...item, todayLog: optimistic } : item,
-      ),
-    } : current);
+    setHabits((current) => current.map((item) =>
+      item.id === habit.id ? { ...item, todayLog: optimistic } : item
+    ));
     try {
-      const saved = await apiRequest<HabitLog>(`/habits/${habit.id}/logs/${localDate}`, {
+      const saved = await apiRequest<HabitLog>(`/habits/${habit.id}/logs/${selectedDate}`, {
         method: "PUT",
         headers: { "idempotency-key": crypto.randomUUID() },
         body: JSON.stringify({
-          status: nextStatus,
-          value: nextStatus === "done" ? habit.target ?? null : null,
+          status: "done",
+          value: habit.target ?? null,
           note: null,
           prayerStatus: null,
         }),
       });
-      setData((current) => current ? {
-        ...current,
-        habits: current.habits.map((item) =>
-          item.id === habit.id ? { ...item, todayLog: saved } : item,
-        ),
-      } : current);
-      toast.success(nextStatus === "done" ? "Check-in saved." : "Marked as intentionally skipped.");
-    } catch (requestError) {
-      setData((current) => current ? {
-        ...current,
-        habits: current.habits.map((item) =>
-          item.id === habit.id ? { ...item, todayLog: previous } : item,
-        ),
-      } : current);
-      toast.error(
-        requestError instanceof Error
-          ? requestError.message
-          : "The check-in could not be saved.",
-      );
+      setHabits((current) => current.map((item) =>
+        item.id === habit.id ? { ...item, todayLog: saved } : item
+      ));
+      toast.success("Promise kept. Check-in saved.");
+    } catch (reason) {
+      setHabits((current) => current.map((item) =>
+        item.id === habit.id ? { ...item, todayLog: previous } : item
+      ));
+      toast.error(reason instanceof Error ? reason.message : "The check-in could not be saved.");
+    } finally {
+      setPendingHabit("");
     }
   }
 
-  async function signOut() {
-    setSigningOut(true);
-    await unregisterPushNotifications().catch(() => null);
-    await fetch("/api/auth/logout", { method: "POST" }).catch(() => null);
-    window.location.assign("/");
+  async function saveJournal() {
+    setSavingJournal(true);
+    try {
+      const saved = await apiRequest<DailyJournal>(`/journal/${selectedDate}`, {
+        method: "PUT",
+        body: JSON.stringify({
+          winNote: draft.winNote || null,
+          reflectionNote: draft.reflectionNote || null,
+        }),
+      });
+      setJournal(saved);
+      toast.success("Daily reflection saved.");
+    } catch (reason) {
+      toast.error(reason instanceof Error ? reason.message : "Your reflection could not be saved.");
+    } finally {
+      setSavingJournal(false);
+    }
   }
 
-  if (loading) return <DashboardLoading />;
-
-  if (error || !data) {
-    return (
-      <main className="honest-state">
-        <span><CircleAlert size={28} /></span>
-        <p>YOUR PRIVATE SPACE</p>
-        <h1>We couldn’t load your account.</h1>
-        <small>{error || "The account service is temporarily unavailable."}</small>
-        <button onClick={() => void loadDashboard()}><RefreshCw size={17} /> Try again</button>
-      </main>
-    );
+  function moveDay(offset: number) {
+    const date = new Date(`${selectedDate}T12:00:00`);
+    date.setDate(date.getDate() + offset);
+    setSelectedDate(localDateString(date));
   }
 
-  const completed = data.habits.filter((habit) => habit.todayLog?.status === "done").length;
-  const percentage = data.habits.length
-    ? Math.round((completed / data.habits.length) * 100)
-    : 0;
-  const displayName = profileDisplayName(data.profile);
-  const dateLabel = new Intl.DateTimeFormat("en-US", {
+  const completed = habits.filter((habit) => habit.todayLog?.status === "done").length;
+  const percentage = habits.length ? Math.round((completed / habits.length) * 100) : 0;
+  const dateLabel = useMemo(() => new Intl.DateTimeFormat("en-US", {
     weekday: "long",
     month: "long",
     day: "numeric",
-  }).format(new Date());
+    year: selectedDate.slice(0, 4) === today.slice(0, 4) ? undefined : "numeric",
+  }).format(new Date(`${selectedDate}T12:00:00`)), [selectedDate, today]);
+  const journalChanged = Boolean(journal) && (
+    draft.winNote !== (journal?.win_note ?? "") ||
+    draft.reflectionNote !== (journal?.reflection_note ?? "")
+  );
 
   return (
-    <main className="honest-dashboard">
-      <header className="honest-topbar">
-        <a href="/dashboard" className="bloom-brand">
-          <span><Sprout size={21} /></span><strong>Bloom</strong>
-        </a>
-        <div className="honest-account">
-          <span><Bell size={18} /> {data.notifications.length}</span>
-          <div><strong>{displayName}</strong><small>{data.profile.email}</small></div>
-          <button onClick={() => void signOut()} disabled={signingOut}>
-            {signingOut ? <LoaderCircle className="spin" size={17} /> : <LogOut size={17} />}
-            Sign out
+    <div className="page-stack">
+      <header className="page-heading daily-heading">
+        <div>
+          <p>{selectedDate === today ? "TODAY’S JOURNAL" : "DAILY JOURNAL"}</p>
+          <h1>{dateLabel}</h1>
+          <span>A clear record of the promises you kept—not a perfect-day scorecard.</span>
+        </div>
+        <div className="date-navigator" aria-label="Choose journal date">
+          <button type="button" onClick={() => moveDay(-1)} aria-label="Previous day">
+            <ChevronLeft size={18} />
+          </button>
+          <label>
+            <CalendarDays size={17} />
+            <input
+              type="date"
+              value={selectedDate}
+              max={today}
+              aria-label="Journal date"
+              onChange={(event) => {
+                if (event.target.value) setSelectedDate(event.target.value);
+              }}
+            />
+          </label>
+          <button
+            type="button"
+            onClick={() => moveDay(1)}
+            aria-label="Next day"
+            disabled={selectedDate >= today}
+          >
+            <ChevronRight size={18} />
           </button>
         </div>
       </header>
 
-      <div className="honest-layout">
-        <aside className="honest-sidebar">
-          <p>YOUR PRIVATE SPACE</p>
-          <nav aria-label="Account sections">
-            <a href="#today" className="active"><Leaf size={18} /> Today</a>
-            {data.profile.religion_preference === "muslim" && (
-              <a href="#prayers"><Bell size={18} /> Prayers</a>
-            )}
-            <a href="#inbox"><Inbox size={18} /> Inbox <span>{data.notifications.length}</span></a>
-            <a href="#settings"><Settings size={18} /> Settings</a>
-          </nav>
-          <div><ShieldCheck size={22} /><strong>Private by design</strong><p>Only your authenticated account can see this page.</p></div>
-        </aside>
-
-        <div className="honest-content">
-          <section className="honest-welcome" id="today">
+      {loading ? (
+        <DayLoading />
+      ) : error ? (
+        <section className="page-error" role="alert">
+          <CircleAlert size={24} />
+          <div><strong>We couldn’t open this journal.</strong><span>{error}</span></div>
+          <button type="button" onClick={() => void loadDay()}><RotateCcw size={16} /> Try again</button>
+        </section>
+      ) : (
+        <>
+          <section className="daily-score" aria-label={`${percentage}% complete`}>
             <div>
-              <p>{dateLabel.toUpperCase()}</p>
-              <h1>Keep the promises that matter, {displayName}.</h1>
-              <span>Today’s record is built only from your real check-ins.</span>
+              <p>DAILY SCORE</p>
+              <strong>{completed}<span> / {habits.length}</span></strong>
+              <small>{habits.length ? "promises kept" : "no habits scheduled"}</small>
+            </div>
+            <div className="daily-score__bar">
+              <span><i style={{ width: `${percentage}%` }} /></span>
+              <strong>{percentage}%</strong>
             </div>
           </section>
 
-          <section className="honest-summary">
-            <div>
-              <p>TODAY’S RECORD</p>
-              <h2>{data.habits.length ? `${completed} of ${data.habits.length} complete` : "A clear place to begin"}</h2>
-              <span>{data.habits.length ? "Every honest mark strengthens the system." : "No habits are scheduled for today."}</span>
-            </div>
-            <div
-              className="honest-ring"
-              style={{ "--honest-progress": `${percentage * 3.6}deg` } as React.CSSProperties}
-              aria-label={`${percentage}% complete`}
-            >
-              <span><strong>{percentage}%</strong><small>complete</small></span>
-            </div>
-          </section>
-
-          {data.profile.religion_preference === "muslim" && (
-            <PrayerPanel localDate={localDate} />
-          )}
-
-          <section className="honest-habits" aria-labelledby="today-habits-title">
-            <div className="honest-section-title">
-              <div><p>YOUR PRACTICE</p><h2 id="today-habits-title">Today’s habits</h2></div>
-              <div className="honest-section-actions">
-                <span>{data.habits.length} active today</span>
-                <button type="button" onClick={() => setShowAddHabit(true)}>
-                  <Plus size={16} /> Add habit
-                </button>
+          <section className="journal-sheet" aria-labelledby="daily-rules-title">
+            <div className="journal-sheet__header">
+              <div>
+                <span>{selectedDate === today ? "Today" : dateLabel}</span>
+                <h2 id="daily-rules-title">Your daily promises</h2>
               </div>
+              <strong>{percentage}%</strong>
             </div>
 
-            {data.habits.length === 0 ? (
-              <div className="honest-empty">
-                <span><Sprout size={25} /></span>
-                <h3>No habits yet.</h3>
-                <p>Your account is ready. Add a practice when you know what promise you want to keep.</p>
-                <button type="button" onClick={() => setShowAddHabit(true)}>
-                  <Plus size={16} /> Add your first habit
-                </button>
+            {habits.length === 0 ? (
+              <div className="journal-empty">
+                <Sparkles size={26} />
+                <h3>A blank page for this day.</h3>
+                <p>No habits are scheduled. Add or adjust habits from the Habits page.</p>
+                <a href="/dashboard/habits">Manage habits</a>
               </div>
             ) : (
-              <div className="honest-habit-list">
-                {data.habits.map((habit) => {
-                  const progress = habitProgress(habit);
-                  const isDone = habit.todayLog?.status === "done";
+              <ol className="promise-list">
+                {habits.map((habit) => {
+                  const done = habit.todayLog?.status === "done";
+                  const busy = pendingHabit === habit.id;
                   return (
-                    <article className={isDone ? "is-complete" : ""} key={habit.id}>
-                      <span className="honest-habit-icon">{habit.icon}</span>
-                      <div className="honest-habit-copy">
-                        <p>{habit.category.toUpperCase()}</p>
-                        <h3>{habit.name}</h3>
-                        <span>{habitProgressLabel(habit)}</span>
-                        <div><i style={{ width: `${progress}%` }} /></div>
-                      </div>
+                    <li key={habit.id} className={done ? "is-done" : ""}>
+                      <span className="promise-index" aria-hidden="true">{habit.icon}</span>
                       <button
-                        className={isDone ? "is-checked" : ""}
+                        type="button"
+                        className="promise-toggle"
                         onClick={() => void toggleHabit(habit)}
-                        aria-label={isDone ? `Mark ${habit.name} as skipped` : `Complete ${habit.name}`}
+                        aria-pressed={done}
+                        aria-label={done ? `Undo ${habit.name}` : `Mark ${habit.name} complete`}
+                        disabled={Boolean(pendingHabit)}
                       >
-                        {isDone && <Check size={21} />}
+                        <span>
+                          <strong>{habit.name}</strong>
+                          <small>{habitTargetLabel(habit)}</small>
+                        </span>
+                        <i>{busy ? <LoaderCircle className="spin" /> : done ? <Check /> : null}</i>
                       </button>
-                    </article>
+                    </li>
                   );
                 })}
-              </div>
+              </ol>
             )}
           </section>
 
-          <section className="honest-inbox" id="inbox" aria-labelledby="inbox-title">
-            <div className="honest-section-title">
-              <div><p>REMINDERS</p><h2 id="inbox-title">Your inbox</h2></div>
-              <span>{data.notifications.length} items</span>
+          <section className="reflection-card" aria-labelledby="reflection-title">
+            <div className="reflection-card__heading">
+              <div><p>REFLECT</p><h2 id="reflection-title">Close the day honestly</h2></div>
+              <small>Private to your account</small>
             </div>
-            {data.notifications.length === 0 ? (
-              <p className="honest-inbox-empty">Nothing needs your attention right now.</p>
-            ) : (
-              <div className="honest-notifications">
-                {data.notifications.slice(0, 3).map((notification) => (
-                  <article key={notification.id}>
-                    <Bell size={18} />
-                    <div><strong>{notification.title}</strong><p>{notification.body}</p></div>
-                  </article>
-                ))}
-              </div>
-            )}
+            <div className="reflection-grid">
+              <label>
+                <span>Today’s win</span>
+                <textarea
+                  maxLength={1000}
+                  value={draft.winNote}
+                  placeholder="What helped you stay focused or disciplined?"
+                  onChange={(event) => setDraft({ ...draft, winNote: event.target.value })}
+                />
+                <small>{draft.winNote.length}/1000</small>
+              </label>
+              <label>
+                <span>Tomorrow’s adjustment</span>
+                <textarea
+                  maxLength={1000}
+                  value={draft.reflectionNote}
+                  placeholder="What got in the way, and what will you change?"
+                  onChange={(event) => setDraft({ ...draft, reflectionNote: event.target.value })}
+                />
+                <small>{draft.reflectionNote.length}/1000</small>
+              </label>
+            </div>
+            <button
+              type="button"
+              className="primary-action"
+              disabled={savingJournal || !journalChanged}
+              onClick={() => void saveJournal()}
+            >
+              {savingJournal ? <LoaderCircle className="spin" /> : <Save />}
+              {journalChanged ? "Save reflection" : "Reflection saved"}
+            </button>
           </section>
-
-          <SettingsPanel
-            profile={data.profile}
-            habits={data.allHabits}
-            onSaved={loadDashboard}
-          />
-        </div>
-      </div>
-      <HabitCreateDialog
-        open={showAddHabit}
-        onOpenChange={setShowAddHabit}
-        templates={data.templates}
-        activeTemplateIds={new Set(
-          data.allHabits
-            .map((habit) => habit.template_id)
-            .filter((templateId): templateId is string => Boolean(templateId)),
-        )}
-        onCreated={async () => {
-          try {
-            await refreshHabits();
-          } catch {
-            toast.error("The habit was saved, but today’s list could not refresh.");
-          }
-          toast.success("Your habit is ready to grow.");
-        }}
-      />
-    </main>
+        </>
+      )}
+    </div>
   );
 }
 
-function DashboardLoading() {
+function habitTargetLabel(habit: TodayHabit) {
+  if (habit.target != null) {
+    return `${habit.target}${habit.unit ? ` ${habit.unit}` : ""}`;
+  }
+  return habit.habit_type === "avoid" ? "Avoid today" : "Complete once";
+}
+
+function DayLoading() {
   return (
-    <main className="honest-dashboard honest-loading" aria-label="Loading your private space">
-      <header className="honest-topbar"><div className="loading-block loading-brand" /><div className="loading-block loading-account" /></header>
-      <div className="honest-loading__content">
-        <div className="loading-block loading-title" />
-        <div className="loading-block loading-summary" />
-        <div className="loading-block loading-row" />
-        <div className="loading-block loading-row" />
-        <span className="sr-only">Loading your habits and reminders.</span>
-      </div>
-    </main>
+    <div className="page-loading" aria-label="Loading daily journal">
+      <span />
+      <span />
+      <span />
+      <i className="sr-only">Loading your daily journal.</i>
+    </div>
   );
 }

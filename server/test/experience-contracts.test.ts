@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  journalSchema,
   onboardingSchema,
   preferencesSchema,
 } from "../src/contracts";
@@ -63,6 +64,19 @@ describe("preference and onboarding contracts", () => {
         "4245f96d-1a2b-4f3c-9d5e-112233445566",
         "4245f96d-1a2b-4f3c-9d5e-112233445566",
       ],
+    }).success).toBe(false);
+  });
+});
+
+describe("daily journal contract", () => {
+  it("accepts concise reflections and rejects oversized entries", () => {
+    expect(journalSchema.safeParse({
+      winNote: "I protected my morning routine.",
+      reflectionNote: "Put the phone outside the room tomorrow.",
+    }).success).toBe(true);
+    expect(journalSchema.safeParse({
+      winNote: "x".repeat(1001),
+      reflectionNote: null,
     }).success).toBe(false);
   });
 });

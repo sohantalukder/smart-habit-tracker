@@ -222,6 +222,38 @@ export interface paths {
         get?: never;
         put: operations["checkInHabit"];
         post?: never;
+        delete: operations["removeHabitCheckIn"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/journal/{localDate}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getDailyJournal"];
+        put: operations["saveDailyJournal"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/tracking": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getTrackingReport"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -734,6 +766,58 @@ export interface components {
         } & {
             [key: string]: unknown;
         };
+        DailyJournalInput: {
+            winNote?: string | null;
+            reflectionNote?: string | null;
+        };
+        DailyJournal: {
+            /** Format: uuid */
+            id: string | null;
+            /** Format: uuid */
+            user_id: string;
+            /** Format: date */
+            local_date: string;
+            win_note: string | null;
+            reflection_note: string | null;
+            /** Format: date-time */
+            created_at?: string;
+            /** Format: date-time */
+            updated_at?: string;
+        };
+        TrackingHabit: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            icon: string;
+            /** @enum {string} */
+            habit_type: "do" | "avoid" | "count" | "duration";
+            target: number | null;
+            unit: string | null;
+            /** @enum {string} */
+            status: "done" | "skipped" | "partial" | "not_checked";
+            value: number | null;
+            note: string | null;
+        };
+        TrackingDay: {
+            /** Format: date */
+            date: string;
+            completed: number;
+            scheduled: number;
+            completionRate: number;
+            winNote: string | null;
+            reflectionNote: string | null;
+            habits: components["schemas"]["TrackingHabit"][];
+        };
+        TrackingReport: {
+            /** Format: date */
+            from: string;
+            /** Format: date */
+            to: string;
+            totalCompleted: number;
+            totalScheduled: number;
+            completionRate: number;
+            days: components["schemas"]["TrackingDay"][];
+        };
         NotificationDelivery: {
             /** Format: uuid */
             id: string;
@@ -1230,6 +1314,107 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HabitLog"];
+                };
+            };
+            400: components["responses"]["Error"];
+        };
+    };
+    removeHabitCheckIn: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                habitId: components["parameters"]["HabitId"];
+                localDate: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Daily check-in removed. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @constant */
+                        deleted: true;
+                    };
+                };
+            };
+            400: components["responses"]["Error"];
+        };
+    };
+    getDailyJournal: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                localDate: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Daily reflection for the selected date. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DailyJournal"];
+                };
+            };
+            400: components["responses"]["Error"];
+        };
+    };
+    saveDailyJournal: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                localDate: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DailyJournalInput"];
+            };
+        };
+        responses: {
+            /** @description Daily reflection saved. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DailyJournal"];
+                };
+            };
+            400: components["responses"]["Error"];
+        };
+    };
+    getTrackingReport: {
+        parameters: {
+            query: {
+                from: string;
+                to: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Tracking report for a range of up to 366 days. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TrackingReport"];
                 };
             };
             400: components["responses"]["Error"];

@@ -115,3 +115,149 @@ describe("isHabitScheduledOnDate", () => {
     )).toBe(false);
   });
 });
+
+describe("UserController tracking report", () => {
+  it("returns honest daily totals for the selected range", async () => {
+    const database = {
+      query: vi.fn()
+        .mockResolvedValueOnce({
+          rows: [
+            {
+              id: "habit-1",
+              name: "Read",
+              icon: "📚",
+              habit_type: "duration",
+              target: 20,
+              unit: "minutes",
+              frequency: { kind: "daily" },
+              created_at: "2026-07-25T10:00:00.000Z",
+            },
+            {
+              id: "habit-2",
+              name: "Run",
+              icon: "🏃",
+              habit_type: "do",
+              target: null,
+              unit: null,
+              frequency: { kind: "weekdays", days: [0] },
+              created_at: "2026-07-25T10:00:00.000Z",
+            },
+          ],
+        })
+        .mockResolvedValueOnce({
+          rows: [{
+            habit_id: "habit-1",
+            local_date: "2026-07-26",
+            status: "done",
+            value: 20,
+            note: null,
+          }],
+        })
+        .mockResolvedValueOnce({
+          rows: [{
+            local_date: "2026-07-26",
+            win_note: "Kept the promise.",
+            reflection_note: null,
+          }],
+        }),
+    } as unknown as DatabaseService;
+    const controller = new UserController(database);
+
+    const result = await controller.tracking(
+      request,
+      "2026-07-26",
+      "2026-07-27",
+    );
+
+    expect(result).toMatchObject({
+      totalCompleted: 1,
+      totalScheduled: 3,
+      completionRate: 33,
+    });
+    expect(result.days[0]).toMatchObject({
+      date: "2026-07-26",
+      completed: 1,
+      scheduled: 2,
+      winNote: "Kept the promise.",
+    });
+    expect(result.days[1]).toMatchObject({
+      date: "2026-07-27",
+      completed: 0,
+      scheduled: 1,
+    });
+  });
+
+  it("rejects invalid, reversed, and excessive date ranges before querying", async () => {
+    const database = { query: vi.fn() } as unknown as DatabaseService;
+    const controller = new UserController(database);
+
+    await expect(controller.tracking(request, "26-07-2026", "2026-07-27"))
+      .rejects.toMatchObject({ status: 400 });
+    await expect(controller.tracking(request, "2026-07-28", "2026-07-27"))
+      .rejects.toMatchObject({ status: 400 });
+    await expect(controller.tracking(request, "2025-01-01", "2026-07-27"))
+      .rejects.toMatchObject({ status: 400 });
+    expect(database.query).not.toHaveBeenCalled();
+  });
+});
+
+describe("UserController check-in removal", () => {
+  it("deletes only the authenticated user's log for the selected date", async () => {
+    const database = {
+      query: vi.fn().mockResolvedValue({ rows: [], rowCount: 1 }),
+    } as unknown as DatabaseService;
+    const controller = new UserController(database);
+
+    await expect(controller.removeCheckIn(request, "habit-1", "2026-07-26"))
+      .resolves.toEqual({ deleted: true });
+    expect(database.query).toHaveBeenCalledWith(
+      expect.stringContaining("delete from habit_daily_logs"),
+      ["habit-1", request.user.id, "2026-07-26"],
+    );
+  });
+});
+
+describe("UserController daily journal", () => {
+  it("returns an empty private journal when the date has no reflection", async () => {
+    const database = {
+      query: vi.fn().mockResolvedValue({ rows: [] }),
+    } as unknown as DatabaseService;
+    const controller = new UserController(database);
+
+    await expect(controller.journal(request, "2026-07-26")).resolves.toEqual({
+      id: null,
+      user_id: request.user.id,
+      local_date: "2026-07-26",
+      win_note: null,
+      reflection_note: null,
+    });
+  });
+
+  it("upserts trimmed reflection text for the authenticated user", async () => {
+    const saved = {
+      id: "journal-1",
+      user_id: request.user.id,
+      local_date: "2026-07-26",
+      win_note: "A focused morning",
+      reflection_note: null,
+    };
+    const database = {
+      query: vi.fn().mockResolvedValue({ rows: [saved] }),
+    } as unknown as DatabaseService;
+    const controller = new UserController(database);
+
+    await expect(controller.saveJournal(request, "2026-07-26", {
+      winNote: "  A focused morning  ",
+      reflectionNote: "",
+    })).resolves.toEqual(saved);
+    expect(database.query).toHaveBeenCalledWith(
+      expect.stringContaining("insert into daily_journals"),
+      [
+        request.user.id,
+        "2026-07-26",
+        "A focused morning",
+        null,
+      ],
+    );
+  });
+});

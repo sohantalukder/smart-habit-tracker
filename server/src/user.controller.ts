@@ -3,6 +3,7 @@ import {
   Body,
   ConflictException,
   Controller,
+  Delete,
   Get,
   Headers,
   Param,
@@ -14,8 +15,10 @@ import {
 import {
   checkInSchema,
   createHabitSchema,
+  journalSchema,
   type CheckInInput,
   type CreateHabitInput,
+  type JournalInput,
 } from "./contracts";
 import type { AuthenticatedRequest } from "./auth/auth.guard";
 import { DatabaseService } from "./platform/database.service";
@@ -176,6 +179,7 @@ export class UserController {
     @Req() request: AuthenticatedRequest,
     @Query("date") date = new Date().toISOString().slice(0, 10),
   ) {
+    assertLocalDate(date);
     const [habits, logs] = await Promise.all([
       this.database.query(
         `select id, user_id, template_id, name, icon, category, habit_type,
@@ -220,6 +224,7 @@ export class UserController {
     if (!idempotencyKey) {
       throw new BadRequestException("Idempotency-Key header is required.");
     }
+    assertLocalDate(localDate);
     const parsed = checkInSchema.safeParse(input);
     if (!parsed.success) throw new BadRequestException(parsed.error.issues);
     const value = parsed.data;
@@ -259,6 +264,159 @@ export class UserController {
     });
   }
 
+  @Delete("habits/:id/logs/:localDate")
+  async removeCheckIn(
+    @Req() request: AuthenticatedRequest,
+    @Param("id") habitId: string,
+    @Param("localDate") localDate: string,
+  ) {
+    assertLocalDate(localDate);
+    await this.database.query(
+      `delete from habit_daily_logs
+       where habit_id = $1 and user_id = $2 and local_date = $3::date`,
+      [habitId, request.user.id, localDate],
+    );
+    return { deleted: true };
+  }
+
+  @Get("journal/:localDate")
+  async journal(
+    @Req() request: AuthenticatedRequest,
+    @Param("localDate") localDate: string,
+  ) {
+    assertLocalDate(localDate);
+    const result = await this.database.query(
+      `select id, user_id, local_date, win_note, reflection_note, created_at, updated_at
+       from daily_journals
+       where user_id = $1 and local_date = $2::date`,
+      [request.user.id, localDate],
+    );
+    return result.rows[0] ?? {
+      id: null,
+      user_id: request.user.id,
+      local_date: localDate,
+      win_note: null,
+      reflection_note: null,
+    };
+  }
+
+  @Put("journal/:localDate")
+  async saveJournal(
+    @Req() request: AuthenticatedRequest,
+    @Param("localDate") localDate: string,
+    @Body() input: JournalInput,
+  ) {
+    assertLocalDate(localDate);
+    const parsed = journalSchema.safeParse(input);
+    if (!parsed.success) throw new BadRequestException(parsed.error.issues);
+    const result = await this.database.query(
+      `insert into daily_journals (
+         user_id, local_date, win_note, reflection_note
+       )
+       values ($1, $2::date, $3, $4)
+       on conflict (user_id, local_date) do update
+       set win_note = excluded.win_note,
+           reflection_note = excluded.reflection_note,
+           updated_at = now()
+       returning id, user_id, local_date, win_note, reflection_note, created_at, updated_at`,
+      [
+        request.user.id,
+        localDate,
+        parsed.data.winNote || null,
+        parsed.data.reflectionNote || null,
+      ],
+    );
+    return result.rows[0];
+  }
+
+  @Get("tracking")
+  async tracking(
+    @Req() request: AuthenticatedRequest,
+    @Query("from") from: string,
+    @Query("to") to: string,
+  ) {
+    const dates = reportDates(from, to);
+    const [habits, logs, journals] = await Promise.all([
+      this.database.query(
+        `select id, name, icon, habit_type, target::float8 as target, unit,
+                frequency, created_at
+         from habits
+         where user_id = $1
+           and deleted_at is null
+           and created_at::date <= $2::date
+         order by created_at, name`,
+        [request.user.id, to],
+      ),
+      this.database.query(
+        `select habit_id, local_date, status, value::float8 as value, note
+         from habit_daily_logs
+         where user_id = $1
+           and local_date between $2::date and $3::date
+         order by local_date, created_at`,
+        [request.user.id, from, to],
+      ),
+      this.database.query(
+        `select local_date, win_note, reflection_note
+         from daily_journals
+         where user_id = $1
+           and local_date between $2::date and $3::date
+         order by local_date`,
+        [request.user.id, from, to],
+      ),
+    ]);
+
+    const logByDateAndHabit = new Map(
+      logs.rows.map((log) => [`${dateValue(log.local_date)}:${log.habit_id}`, log]),
+    );
+    const journalByDate = new Map(
+      journals.rows.map((journal) => [dateValue(journal.local_date), journal]),
+    );
+    const days = dates.map((date) => {
+      const scheduledHabits = habits.rows.filter((habit) =>
+        dateValue(habit.created_at) <= date &&
+        isHabitScheduledOnDate(habit.frequency, date)
+      );
+      const habitEntries = scheduledHabits.map((habit) => {
+        const log = logByDateAndHabit.get(`${date}:${habit.id}`);
+        return {
+          id: habit.id,
+          name: habit.name,
+          icon: habit.icon,
+          habit_type: habit.habit_type,
+          target: habit.target,
+          unit: habit.unit,
+          status: log?.status ?? "not_checked",
+          value: log?.value ?? null,
+          note: log?.note ?? null,
+        };
+      });
+      const completed = habitEntries.filter((habit) => habit.status === "done").length;
+      const scheduled = habitEntries.length;
+      const journal = journalByDate.get(date);
+      return {
+        date,
+        completed,
+        scheduled,
+        completionRate: scheduled ? Math.round((completed / scheduled) * 100) : 0,
+        winNote: journal?.win_note ?? null,
+        reflectionNote: journal?.reflection_note ?? null,
+        habits: habitEntries,
+      };
+    });
+    const totalCompleted = days.reduce((sum, day) => sum + day.completed, 0);
+    const totalScheduled = days.reduce((sum, day) => sum + day.scheduled, 0);
+    return {
+      from,
+      to,
+      totalCompleted,
+      totalScheduled,
+      completionRate: totalScheduled
+        ? Math.round((totalCompleted / totalScheduled) * 100)
+        : 0,
+      days,
+    };
+  }
+
   @Get("notifications")
   async notifications(@Req() request: AuthenticatedRequest) {
     const result = await this.database.query(
@@ -295,4 +453,38 @@ function isUniqueViolation(error: unknown) {
     "code" in error &&
     error.code === "23505",
   );
+}
+
+function assertLocalDate(value: string) {
+  if (!isLocalDate(value)) {
+    throw new BadRequestException("Date must use YYYY-MM-DD.");
+  }
+}
+
+function isLocalDate(value: string) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const date = new Date(`${value}T00:00:00.000Z`);
+  return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value;
+}
+
+function reportDates(from: string, to: string) {
+  assertLocalDate(from);
+  assertLocalDate(to);
+  const start = new Date(`${from}T00:00:00.000Z`);
+  const end = new Date(`${to}T00:00:00.000Z`);
+  if (start > end) {
+    throw new BadRequestException("The start date must be on or before the end date.");
+  }
+  const dayCount = Math.floor((end.getTime() - start.getTime()) / 86_400_000) + 1;
+  if (dayCount > 366) {
+    throw new BadRequestException("Choose a date range of 366 days or fewer.");
+  }
+  return Array.from({ length: dayCount }, (_, index) =>
+    new Date(start.getTime() + index * 86_400_000).toISOString().slice(0, 10)
+  );
+}
+
+function dateValue(value: unknown) {
+  if (value instanceof Date) return value.toISOString().slice(0, 10);
+  return String(value).slice(0, 10);
 }

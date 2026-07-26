@@ -38,3 +38,40 @@ export type HabitWithReminder = Habit & {
   reminder_enabled?: boolean;
   reminder_time?: string | null;
 };
+export type DailyJournal = {
+  id: string | null;
+  user_id: string;
+  local_date: string;
+  win_note: string | null;
+  reflection_note: string | null;
+  created_at?: string;
+  updated_at?: string;
+};
+export type TrackingHabit = {
+  id: string;
+  name: string;
+  icon: string;
+  habit_type: Habit["habit_type"];
+  target: number | null;
+  unit: string | null;
+  status: HabitLog["status"] | "not_checked";
+  value: number | null;
+  note: string | null;
+};
+export type TrackingDay = {
+  date: string;
+  completed: number;
+  scheduled: number;
+  completionRate: number;
+  winNote: string | null;
+  reflectionNote: string | null;
+  habits: TrackingHabit[];
+};
+export type TrackingReport = {
+  from: string;
+  to: string;
+  totalCompleted: number;
+  totalScheduled: number;
+  completionRate: number;
+  days: TrackingDay[];
+};
