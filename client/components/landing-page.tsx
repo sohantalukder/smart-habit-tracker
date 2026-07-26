@@ -54,12 +54,6 @@ const features = [
   },
   {
     number: "07",
-    icon: Fingerprint,
-    title: "Private by design",
-    copy: "The public page asks for nothing personal. Your routine belongs behind your account.",
-  },
-  {
-    number: "08",
     icon: Cloud,
     title: "Continuity across sessions",
     copy: "Return to the same habits and records whenever you sign back in.",
@@ -148,7 +142,7 @@ export function LandingPage() {
         <div className="landing-section-heading">
           <p>THE COMPLETE PRACTICE</p>
           <h2 id="features-title">Everything you need to live with intention.</h2>
-          <span>Eight connected tools. One clear place to return.</span>
+          <span>Seven connected tools. One clear place to return.</span>
         </div>
         <div className="feature-grid">
           {features.map((feature) => {

@@ -165,7 +165,7 @@ export function HistoryPage() {
               onClick={() => void downloadPdf()}
             >
               {downloading === "pdf" ? <LoaderCircle className="spin" /> : <Download />}
-              Download branded PDF
+              Download PDF
             </button>
           </div>
         </div>

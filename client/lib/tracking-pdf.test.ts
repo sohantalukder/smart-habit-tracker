@@ -46,7 +46,7 @@ describe("branded tracking PDF", () => {
     for (const page of pageStreams) {
       const stream = page?.join("\n") ?? "";
       expect(stream).toContain("(Bloom)");
-      expect(stream).toContain("(Bloom - Private by design)");
+      expect(stream).toContain("(Bloom Habit Tracker)");
     }
     const source = document.output();
     expect(source).toContain("/Author (Bloom)");

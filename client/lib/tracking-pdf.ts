@@ -199,7 +199,7 @@ function drawFooter(
   document.setTextColor(...muted);
   document.setFont("helvetica", "normal");
   document.setFontSize(7);
-  document.text("Bloom - Private by design", 14, pageHeight - 7);
+  document.text("Bloom Habit Tracker", 14, pageHeight - 7);
   document.text(`Page ${pageNumber}`, pageWidth - 14, pageHeight - 7, { align: "right" });
 }
 
