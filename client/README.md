@@ -38,8 +38,10 @@ Import this repository as one Vercel project. Configure:
   `NEXT_PUBLIC_FIREBASE_PROJECT_ID`,
   `NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET`,
   `NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID`,
-  `NEXT_PUBLIC_FIREBASE_APP_ID`, and
-  `NEXT_PUBLIC_FIREBASE_VAPID_KEY`.
+  and `NEXT_PUBLIC_FIREBASE_APP_ID`.
+- Optionally set `NEXT_PUBLIC_FIREBASE_VAPID_KEY` to the public key from
+  Firebase Console → Project settings → Cloud Messaging → Web Push
+  certificates. When it is omitted, the Firebase SDK uses its default key.
 
 No database, Redis, Resend, or bearer-session secrets belong in the Vercel
 project. The Firebase Web App configuration and VAPID public key are public

@@ -1,4 +1,21 @@
 import { build } from "esbuild";
+import { loadEnvFile } from "node:process";
+
+const nodeEnvironment = process.env.NODE_ENV ?? "development";
+const environmentFiles = [
+  `.env.${nodeEnvironment}.local`,
+  ...(nodeEnvironment === "test" ? [] : [".env.local"]),
+  `.env.${nodeEnvironment}`,
+  ".env",
+];
+
+for (const environmentFile of environmentFiles) {
+  try {
+    loadEnvFile(environmentFile);
+  } catch (error) {
+    if (error?.code !== "ENOENT") throw error;
+  }
+}
 
 const publicVariables = [
   "NEXT_PUBLIC_FIREBASE_API_KEY",

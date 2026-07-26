@@ -25,6 +25,12 @@ const config = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
+const registrationOptions = {
+  ...(process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY
+    ? { vapidKey: process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY }
+    : {}),
+};
+
 let messagingPromise: Promise<Messaging | null> | null = null;
 let listenersAttached = false;
 
@@ -61,7 +67,7 @@ export async function enablePushNotifications(
   );
   const uploaded = waitForRegistrationUpload(messaging);
   await register(messaging, {
-    vapidKey: process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY,
+    ...registrationOptions,
     serviceWorkerRegistration: registration,
   });
   await uploaded;
@@ -83,7 +89,7 @@ export async function syncPushRegistration(
     { scope: "/" },
   );
   await register(messaging, {
-    vapidKey: process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY,
+    ...registrationOptions,
     serviceWorkerRegistration: registration,
   });
   return "enabled" as const;
@@ -151,8 +157,5 @@ async function uploadInstallation(installationId: string) {
 }
 
 function isConfigured() {
-  return (
-    Object.values(config).every(Boolean)
-    && Boolean(process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY)
-  );
+  return Object.values(config).every(Boolean);
 }
