@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   isAdminPortalAuthorized,
   requireAdminPortal,
+  requireSuperAdmin,
 } from "../src/auth/support-access";
 import type { AuthenticatedRequest } from "../src/auth/auth.guard";
 import type { DatabaseService } from "../src/platform/database.service";
@@ -47,6 +48,28 @@ describe("isAdminPortalAuthorized", () => {
 
     await expect(requireAdminPortal(request, database)).resolves.toMatchObject({
       role: "super_admin",
+    });
+  });
+
+  it("keeps sensitive mutations behind the super-admin role", async () => {
+    const database = {
+      query: vi.fn().mockResolvedValue({
+        rows: [{
+          id: "4245f96d-1a2b-4f3c-9d5e-112233445566",
+          email: "support@example.com",
+          name: "Support",
+          role: "support",
+          suspended_at: null,
+          deleted_at: null,
+        }],
+      }),
+    } as unknown as DatabaseService;
+    const request = {
+      user: { id: "4245f96d-1a2b-4f3c-9d5e-112233445566" },
+    } as AuthenticatedRequest;
+
+    await expect(requireSuperAdmin(request, database)).rejects.toMatchObject({
+      status: 403,
     });
   });
 });

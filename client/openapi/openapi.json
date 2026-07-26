@@ -879,6 +879,27 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 50
+            }
           }
         ],
         "responses": {
@@ -890,7 +911,9 @@
                   "type": "object",
                   "required": [
                     "data",
-                    "count"
+                    "count",
+                    "page",
+                    "pageSize"
                   ],
                   "properties": {
                     "data": {
@@ -900,6 +923,12 @@
                       }
                     },
                     "count": {
+                      "type": "integer"
+                    },
+                    "page": {
+                      "type": "integer"
+                    },
+                    "pageSize": {
                       "type": "integer"
                     }
                   }
@@ -937,11 +966,17 @@
               "schema": {
                 "type": "object",
                 "required": [
-                  "suspended"
+                  "suspended",
+                  "reason"
                 ],
                 "properties": {
                   "suspended": {
                     "type": "boolean"
+                  },
+                  "reason": {
+                    "type": "string",
+                    "minLength": 3,
+                    "maxLength": 500
                   }
                 }
               }
@@ -959,6 +994,260 @@
             "$ref": "#/components/responses/Error"
           }
         }
+      }
+    },
+    "/admin/users/{userId}/details": {
+      "get": {
+        "operationId": "adminGetUserDetails",
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "User account, habits, activity, prayer, notification, session, verification, and installation data."
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/admin/users/{userId}/profile": {
+      "patch": {
+        "operationId": "adminUpdateUserProfile",
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminUserUpdateInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated user profile and administrator role."
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/admin/users/{userId}/prayer-settings": {
+      "patch": {
+        "operationId": "adminUpdateUserPrayerSettings",
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          },
+          { "$ref": "#/components/parameters/IdempotencyKey" }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/AdminPrayerSettingsInput" }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Updated prayer calculation and location settings." },
+          "400": { "$ref": "#/components/responses/Error" },
+          "403": { "$ref": "#/components/responses/Error" }
+        }
+      }
+    },
+    "/admin/users/{userId}/password": {
+      "post": {
+        "operationId": "adminChangeUserPassword",
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminPasswordChangeInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Permanent password changed and all user sessions revoked."
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/admin/users/{userId}/habits/{habitId}": {
+      "patch": {
+        "operationId": "adminUpdateUserHabit",
+        "parameters": [
+          { "name": "userId", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } },
+          { "name": "habitId", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } },
+          { "$ref": "#/components/parameters/IdempotencyKey" }
+        ],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "object" } } } },
+        "responses": { "200": { "description": "User habit and reminder updated." }, "403": { "$ref": "#/components/responses/Error" } }
+      }
+    },
+    "/admin/users/{userId}/habits/{habitId}/check-ins/{localDate}": {
+      "put": {
+        "operationId": "adminSaveUserCheckIn",
+        "parameters": [
+          { "name": "userId", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } },
+          { "name": "habitId", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } },
+          { "name": "localDate", "in": "path", "required": true, "schema": { "type": "string", "format": "date" } },
+          { "$ref": "#/components/parameters/IdempotencyKey" }
+        ],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CheckInInput" } } } },
+        "responses": { "200": { "description": "User check-in saved." } }
+      },
+      "delete": {
+        "operationId": "adminDeleteUserCheckIn",
+        "parameters": [
+          { "name": "userId", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } },
+          { "name": "habitId", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } },
+          { "name": "localDate", "in": "path", "required": true, "schema": { "type": "string", "format": "date" } },
+          { "$ref": "#/components/parameters/IdempotencyKey" }
+        ],
+        "responses": { "200": { "description": "User check-in deleted." } }
+      }
+    },
+    "/admin/users/{userId}/journals/{localDate}": {
+      "put": {
+        "operationId": "adminSaveUserJournal",
+        "parameters": [
+          { "name": "userId", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } },
+          { "name": "localDate", "in": "path", "required": true, "schema": { "type": "string", "format": "date" } },
+          { "$ref": "#/components/parameters/IdempotencyKey" }
+        ],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/DailyJournalInput" } } } },
+        "responses": { "200": { "description": "User journal saved." } }
+      },
+      "delete": {
+        "operationId": "adminDeleteUserJournal",
+        "parameters": [
+          { "name": "userId", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } },
+          { "name": "localDate", "in": "path", "required": true, "schema": { "type": "string", "format": "date" } },
+          { "$ref": "#/components/parameters/IdempotencyKey" }
+        ],
+        "responses": { "200": { "description": "User journal deleted." } }
+      }
+    },
+    "/admin/users/{userId}/prayers/{prayer}/logs/{localDate}": {
+      "put": {
+        "operationId": "adminSaveUserPrayerLog",
+        "parameters": [
+          { "name": "userId", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } },
+          { "name": "prayer", "in": "path", "required": true, "schema": { "$ref": "#/components/schemas/PrayerName" } },
+          { "name": "localDate", "in": "path", "required": true, "schema": { "type": "string", "format": "date" } },
+          { "$ref": "#/components/parameters/IdempotencyKey" }
+        ],
+        "responses": { "200": { "description": "User prayer log saved." } }
+      },
+      "delete": {
+        "operationId": "adminDeleteUserPrayerLog",
+        "parameters": [
+          { "name": "userId", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } },
+          { "name": "prayer", "in": "path", "required": true, "schema": { "$ref": "#/components/schemas/PrayerName" } },
+          { "name": "localDate", "in": "path", "required": true, "schema": { "type": "string", "format": "date" } },
+          { "$ref": "#/components/parameters/IdempotencyKey" }
+        ],
+        "responses": { "200": { "description": "User prayer log deleted." } }
+      }
+    },
+    "/admin/users/{userId}/prayer-reminders/{prayer}": {
+      "put": {
+        "operationId": "adminSaveUserPrayerReminder",
+        "parameters": [
+          { "name": "userId", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } },
+          { "name": "prayer", "in": "path", "required": true, "schema": { "$ref": "#/components/schemas/PrayerName" } },
+          { "$ref": "#/components/parameters/IdempotencyKey" }
+        ],
+        "responses": { "200": { "description": "User prayer reminder saved." } }
+      }
+    },
+    "/admin/users/{userId}/sessions/revoke": {
+      "post": {
+        "operationId": "adminRevokeUserSessions",
+        "parameters": [
+          { "name": "userId", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } },
+          { "$ref": "#/components/parameters/IdempotencyKey" }
+        ],
+        "responses": { "200": { "description": "All active user sessions revoked." } }
+      }
+    },
+    "/admin/users/{userId}/verification-requests/invalidate": {
+      "post": {
+        "operationId": "adminInvalidateUserVerificationRequests",
+        "parameters": [
+          { "name": "userId", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } },
+          { "$ref": "#/components/parameters/IdempotencyKey" }
+        ],
+        "responses": { "200": { "description": "Pending user verification requests invalidated." } }
+      }
+    },
+    "/admin/users/{userId}/installations/{installationId}": {
+      "patch": {
+        "operationId": "adminUpdateUserInstallation",
+        "parameters": [
+          { "name": "userId", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } },
+          { "name": "installationId", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } },
+          { "$ref": "#/components/parameters/IdempotencyKey" }
+        ],
+        "responses": { "200": { "description": "User installation status updated." } }
       }
     },
     "/admin/templates": {
@@ -1052,6 +1341,20 @@
           "201": {
             "description": "Notification queued for retry."
           }
+        }
+      }
+    },
+    "/admin/notifications/{deliveryId}/cancel": {
+      "post": {
+        "operationId": "adminCancelNotification",
+        "parameters": [
+          { "name": "deliveryId", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } },
+          { "$ref": "#/components/parameters/IdempotencyKey" }
+        ],
+        "responses": {
+          "200": { "description": "Scheduled or failed notification cancelled." },
+          "400": { "$ref": "#/components/responses/Error" },
+          "403": { "$ref": "#/components/responses/Error" }
         }
       }
     },
@@ -1566,6 +1869,73 @@
         "properties": {
           "currentPassword": { "type": "string", "minLength": 1, "maxLength": 128 },
           "newPassword": { "type": "string", "minLength": 8, "maxLength": 128 }
+        }
+      },
+      "AdminUserUpdateInput": {
+        "type": "object",
+        "required": [
+          "name",
+          "email",
+          "timezone",
+          "units",
+          "goals",
+          "pace",
+          "religion",
+          "dailyDigestTime",
+          "dailyDigestEnabled",
+          "role"
+        ],
+        "properties": {
+          "name": { "type": "string", "minLength": 2, "maxLength": 80 },
+          "email": { "type": "string", "format": "email" },
+          "timezone": { "type": "string" },
+          "units": { "type": "string", "enum": ["metric", "imperial"] },
+          "goals": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": ["movement", "nutrition", "learning", "sleep", "mindfulness"]
+            },
+            "maxItems": 5,
+            "uniqueItems": true
+          },
+          "pace": { "type": "string", "enum": ["light", "balanced", "ambitious"] },
+          "religion": { "type": "string", "enum": ["muslim", "other", "unspecified"] },
+          "dailyDigestTime": {
+            "type": "string",
+            "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$"
+          },
+          "dailyDigestEnabled": { "type": "boolean" },
+          "role": {
+            "type": ["string", "null"],
+            "enum": ["support", "super_admin", null]
+          }
+        }
+      },
+      "AdminPasswordChangeInput": {
+        "type": "object",
+        "required": ["newPassword", "confirmation", "adminPassword"],
+        "properties": {
+          "newPassword": { "type": "string", "minLength": 8, "maxLength": 128 },
+          "confirmation": { "type": "string", "minLength": 8, "maxLength": 128 },
+          "adminPassword": { "type": "string", "minLength": 1, "maxLength": 128 }
+        }
+      },
+      "AdminPrayerSettingsInput": {
+        "type": "object",
+        "required": ["enabled", "latitude", "longitude", "madhab", "calculationMethod"],
+        "properties": {
+          "enabled": { "type": "boolean" },
+          "latitude": { "type": ["number", "null"], "minimum": -90, "maximum": 90 },
+          "longitude": { "type": ["number", "null"], "minimum": -180, "maximum": 180 },
+          "madhab": {
+            "type": ["string", "null"],
+            "enum": ["hanafi", "shafi", "maliki", "hanbali", null]
+          },
+          "calculationMethod": {
+            "type": ["string", "null"],
+            "enum": ["karachi", "muslim_world_league", "egyptian", "umm_al_qura", "dubai", "qatar", "kuwait", "moonsighting_committee", "singapore", "turkey", "tehran", "north_america", null]
+          }
         }
       },
       "EmailChangeInput": {

@@ -35,7 +35,10 @@ export class ApiRequestError extends Error {
   }
 }
 
-export function idempotentInit(method: "POST" | "PATCH" | "PUT", body?: unknown): RequestInit {
+export function idempotentInit(
+  method: "POST" | "PATCH" | "PUT" | "DELETE",
+  body?: unknown,
+): RequestInit {
   return {
     method,
     headers: { "idempotency-key": crypto.randomUUID() },

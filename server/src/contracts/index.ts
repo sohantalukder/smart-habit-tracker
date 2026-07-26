@@ -183,6 +183,101 @@ export const announcementSchema = z.object({
   body: z.string().min(2).max(1000),
   channels: z.array(z.enum(["push", "email", "in_app"])).min(1),
 });
+export const adminUserUpdateSchema = z.object({
+  name: z.string().trim().min(2).max(80),
+  email: z.email().max(254),
+  timezone: z.string().trim().min(1).max(100).refine(
+    isSupportedTimeZone,
+    "Select a valid timezone.",
+  ),
+  units: z.enum(["metric", "imperial"]),
+  goals: z.array(goalPreferenceSchema).max(5).refine(
+    (goals) => new Set(goals).size === goals.length,
+    "Goals must be unique.",
+  ),
+  pace: startingPaceSchema,
+  religion: religionPreferenceSchema,
+  dailyDigestTime: localTimeSchema,
+  dailyDigestEnabled: z.boolean(),
+  role: z.enum(["support", "super_admin"]).nullable(),
+});
+export const adminRestrictionSchema = z.object({
+  suspended: z.boolean(),
+  reason: z.string().trim().min(3).max(500),
+});
+export const adminPasswordChangeSchema = z.object({
+  newPassword: z.string().min(8).max(128),
+  confirmation: z.string().min(8).max(128),
+  adminPassword: z.string().min(1).max(128),
+}).refine(
+  (value) => value.newPassword === value.confirmation,
+  { path: ["confirmation"], message: "Password confirmation does not match." },
+);
+export const adminHabitUpdateSchema = z.object({
+  name: z.string().trim().min(1).max(80),
+  icon: z.string().min(1).max(8),
+  category: habitCategorySchema,
+  type: habitTypeSchema,
+  target: z.number().positive().nullable(),
+  unit: z.string().trim().max(24).nullable(),
+  frequency: frequencySchema,
+  forgiving: z.boolean(),
+  state: z.enum(["active", "paused", "archived"]),
+  reminderEnabled: z.boolean().optional(),
+  reminderTime: localTimeSchema.nullable().optional(),
+});
+export const adminCheckInSchema = checkInSchema.extend({
+  localDate: z.iso.date(),
+});
+export const adminJournalSchema = journalSchema.extend({
+  localDate: z.iso.date(),
+});
+export const adminPrayerLogSchema = z.object({
+  status: z.enum(["on_time", "late", "missed"]),
+  localDate: z.iso.date(),
+});
+export const adminPrayerReminderSchema = z.object({
+  enabled: z.boolean(),
+  offsetMinutes: z.number().int().min(0).max(120),
+});
+export const adminPrayerSettingsSchema = z.object({
+  enabled: z.boolean(),
+  latitude: z.number().min(-90).max(90).nullable(),
+  longitude: z.number().min(-180).max(180).nullable(),
+  madhab: madhabSchema.nullable(),
+  calculationMethod: prayerCalculationMethodSchema.nullable(),
+}).superRefine((value, context) => {
+  if (!value.enabled) return;
+  for (const field of ["latitude", "longitude", "madhab", "calculationMethod"] as const) {
+    if (value[field] === null) {
+      context.addIssue({
+        code: "custom",
+        path: [field],
+        message: `${field} is required when prayer features are enabled.`,
+      });
+    }
+  }
+});
+export const adminInstallationSchema = z.object({
+  active: z.boolean(),
+});
+export const adminTemplateUpdateSchema = z.object({
+  slug: z.string().trim().min(2).max(80).regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/),
+  name: z.string().trim().min(2).max(80),
+  description: z.string().trim().max(500),
+  category: habitCategorySchema,
+  type: habitTypeSchema,
+  icon: z.string().min(1).max(8),
+  target: z.number().positive().nullable(),
+  unit: z.string().trim().max(24).nullable(),
+  frequency: frequencySchema,
+  goals: z.array(goalPreferenceSchema).max(5).refine(
+    (goals) => new Set(goals).size === goals.length,
+    "Goals must be unique.",
+  ),
+  priority: z.number().int().min(0).max(1000),
+  active: z.boolean(),
+});
 export const errorEnvelopeSchema = z.object({
   code: z.string(),
   message: z.string(),
@@ -209,6 +304,17 @@ export type PrayerSetupInput = z.infer<typeof prayerSetupSchema>;
 export type PrayerName = z.infer<typeof prayerNameSchema>;
 export type PrayerCalculationMethod = z.infer<typeof prayerCalculationMethodSchema>;
 export type Madhab = z.infer<typeof madhabSchema>;
+export type AdminUserUpdateInput = z.infer<typeof adminUserUpdateSchema>;
+export type AdminRestrictionInput = z.infer<typeof adminRestrictionSchema>;
+export type AdminPasswordChangeInput = z.infer<typeof adminPasswordChangeSchema>;
+export type AdminHabitUpdateInput = z.infer<typeof adminHabitUpdateSchema>;
+export type AdminCheckInInput = z.infer<typeof adminCheckInSchema>;
+export type AdminJournalInput = z.infer<typeof adminJournalSchema>;
+export type AdminPrayerLogInput = z.infer<typeof adminPrayerLogSchema>;
+export type AdminPrayerReminderInput = z.infer<typeof adminPrayerReminderSchema>;
+export type AdminPrayerSettingsInput = z.infer<typeof adminPrayerSettingsSchema>;
+export type AdminInstallationInput = z.infer<typeof adminInstallationSchema>;
+export type AdminTemplateUpdateInput = z.infer<typeof adminTemplateUpdateSchema>;
 
 function validatePrayerSetup(
   value: {

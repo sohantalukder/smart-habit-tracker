@@ -16,7 +16,6 @@ export default async function DashboardLayout({ children }: { children: ReactNod
     headers: { authorization: `Bearer ${token}` },
   }).catch(() => null);
   if (!authResponse?.ok) redirect("/login?returnTo=%2Fdashboard");
-
   const profileResponse = await serverApiRequest("/profile", {
     headers: { authorization: `Bearer ${token}` },
   }).catch(() => null);

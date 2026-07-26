@@ -84,4 +84,26 @@ describe("AuthService", () => {
       status: 401,
     });
   });
+
+  it("returns an authenticated user without an administrator password flag", async () => {
+    const database = {
+      query: vi.fn().mockResolvedValue({
+        rows: [{
+          session_id: "5245f96d-1a2b-4f3c-9d5e-112233445566",
+          user_id: "4245f96d-1a2b-4f3c-9d5e-112233445566",
+          email: "user@example.com",
+          name: "User",
+        }],
+      }),
+    } as unknown as DatabaseService;
+    const service = new AuthService(
+      database,
+      { send: vi.fn() } as unknown as VerificationEmailService,
+    );
+
+    const result = await service.authenticate("active-session");
+
+    expect(result.user).toMatchObject({ email: "user@example.com" });
+    expect(result.user).not.toHaveProperty("passwordChangeRequired");
+  });
 });

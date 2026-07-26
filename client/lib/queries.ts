@@ -56,26 +56,146 @@ export type AdminUser = {
   email: string;
   name: string;
   timezone: string;
+  units: "metric" | "imperial";
   created_at: string;
   suspended_at: string | null;
+  deleted_at?: string | null;
+  role?: "support" | "moderator" | "super_admin" | null;
+};
+
+export type AdminUserPage = {
+  data: AdminUser[];
+  count: number;
+  page: number;
+  pageSize: number;
 };
 
 export type AdminTemplate = {
   id: string;
+  slug: string;
   icon: string;
   name: string;
+  description: string;
   category: string;
+  habit_type: "do" | "avoid" | "count" | "duration";
   active: boolean;
   default_target: number | null;
   default_unit: string | null;
+  default_frequency: Frequency;
+  goal_tags: string[];
+  recommendation_priority: number;
+};
+
+export type Frequency =
+  | { kind: "daily" }
+  | { kind: "weekly_target"; target: number }
+  | { kind: "weekdays"; days: number[] };
+
+export type AdminUserDetails = {
+  account: AdminUser & {
+    goal_preferences: string[];
+    starting_pace: "light" | "balanced" | "ambitious";
+    religion_preference: "muslim" | "other" | "unspecified";
+    daily_digest_time: string;
+    daily_digest_enabled: boolean;
+    prayer_enabled: boolean;
+    latitude: number | null;
+    longitude: number | null;
+    madhab: "hanafi" | "shafi" | "maliki" | "hanbali" | null;
+    prayer_calculation_method:
+      | "karachi"
+      | "muslim_world_league"
+      | "egyptian"
+      | "umm_al_qura"
+      | "dubai"
+      | "qatar"
+      | "kuwait"
+      | "moonsighting_committee"
+      | "singapore"
+      | "turkey"
+      | "tehran"
+      | "north_america"
+      | null;
+    onboarding_completed_at: string | null;
+    updated_at: string;
+  };
+  habits: Array<{
+    id: string;
+    name: string;
+    icon: string;
+    category: string;
+    habit_type: "do" | "avoid" | "count" | "duration";
+    target: number | null;
+    unit: string | null;
+    frequency: Frequency;
+    forgiving: boolean;
+    state: "active" | "paused" | "archived";
+    deleted_at: string | null;
+    reminder_enabled: boolean | null;
+    reminder_time: string | null;
+  }>;
+  checkIns: Array<{
+    id: string;
+    habit_id: string;
+    habit_name: string;
+    local_date: string;
+    status: "done" | "skipped" | "partial";
+    value: number | null;
+    note: string | null;
+    prayer_status: "on_time" | "late" | "missed" | null;
+  }>;
+  journals: Array<{
+    id: string;
+    local_date: string;
+    win_note: string | null;
+    reflection_note: string | null;
+  }>;
+  prayerLogs: Array<{
+    id: string;
+    local_date: string;
+    prayer_name: PrayerName;
+    status: PrayerStatus;
+  }>;
+  prayerReminders: Array<{
+    prayer_name: PrayerName;
+    enabled: boolean;
+    offset_minutes: number;
+  }>;
+  notifications: AdminDelivery[];
+  sessions: Array<{
+    id: string;
+    expires_at: string;
+    revoked_at: string | null;
+    created_at: string;
+  }>;
+  verificationRequests: Array<{
+    id: string;
+    kind: "email_verification" | "email_change";
+    pending_email: string | null;
+    expires_at: string;
+    consumed_at: string | null;
+    created_at: string;
+  }>;
+  installations: Array<{
+    id: string;
+    platform: string;
+    active: boolean;
+    last_seen_at: string;
+    created_at: string;
+    updated_at: string;
+  }>;
 };
 
 export type AdminDelivery = {
   id: string;
   title: string;
+  body?: string;
   channel: string;
   state: string;
   scheduled_at: string;
+  sent_at?: string | null;
+  attempt_count?: number;
+  error_message?: string | null;
   profiles?: { email?: string; name?: string };
 };
 
@@ -105,7 +225,7 @@ export type AdminHealth = {
 
 export type AdminQueryData =
   | AdminAnalytics
-  | { data: AdminUser[] }
+  | AdminUserPage
   | AdminTemplate[]
   | AdminDelivery[]
   | AdminHealth
@@ -132,7 +252,8 @@ export const queryKeys = {
     all: ["admin"] as const,
     analytics: ["admin", "analytics"] as const,
     usersRoot: ["admin", "users"] as const,
-    users: (search: string) => ["admin", "users", search] as const,
+    users: (search: string, page = 1) => ["admin", "users", search, page] as const,
+    userDetails: (id: string) => ["admin", "users", id, "details"] as const,
     templates: ["admin", "templates"] as const,
     notifications: ["admin", "notifications"] as const,
     health: ["admin", "health"] as const,
@@ -182,14 +303,14 @@ export const appQueries = {
     queryFn: ({ signal }) =>
       apiRequest<PrayerSchedule>(`/prayer-times?date=${date}`, { signal }),
   }),
-  admin: (page: AdminPage, search = "") => queryOptions({
-    queryKey: adminQueryKey(page, search),
-    queryFn: ({ signal }) => loadAdminPage(page, search, signal),
+  admin: (page: AdminPage, search = "", userPage = 1) => queryOptions({
+    queryKey: adminQueryKey(page, search, userPage),
+    queryFn: ({ signal }) => loadAdminPage(page, search, userPage, signal),
   }),
 };
 
-export function adminQueryKey(page: AdminPage, search = "") {
-  if (page === "users") return queryKeys.admin.users(search);
+export function adminQueryKey(page: AdminPage, search = "", userPage = 1) {
+  if (page === "users") return queryKeys.admin.users(search, userPage);
   if (page === "overview") return queryKeys.admin.analytics;
   if (page === "templates") return queryKeys.admin.templates;
   if (page === "notifications") return queryKeys.admin.notifications;
@@ -210,14 +331,15 @@ export function updateTodayHabitLog(
 async function loadAdminPage(
   page: AdminPage,
   search: string,
+  userPage: number,
   signal: AbortSignal,
 ): Promise<AdminQueryData> {
   if (page === "overview") {
     return apiRequest<AdminAnalytics>("/admin/analytics", { signal });
   }
   if (page === "users") {
-    return apiRequest<{ data: AdminUser[] }>(
-      `/admin/users?q=${encodeURIComponent(search)}`,
+    return apiRequest<AdminUserPage>(
+      `/admin/users?q=${encodeURIComponent(search)}&page=${userPage}&limit=50`,
       { signal },
     );
   }

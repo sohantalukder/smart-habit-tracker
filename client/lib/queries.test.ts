@@ -61,8 +61,11 @@ describe("TanStack Query cache policy", () => {
     expect(queryKeys.user.tracking("2026-07-01", "2026-07-07")).not.toEqual(
       queryKeys.user.tracking("2026-07-01", "2026-07-31"),
     );
-    expect(adminQueryKey("users", "amina")).not.toEqual(
-      adminQueryKey("users", "sohan"),
+    expect(adminQueryKey("users", "amina", 1)).not.toEqual(
+      adminQueryKey("users", "amina", 2),
+    );
+    expect(adminQueryKey("users", "amina", 1)).not.toEqual(
+      adminQueryKey("users", "sohan", 1),
     );
   });
 

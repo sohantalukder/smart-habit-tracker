@@ -51,6 +51,17 @@ export async function requireAdminPortal(
   };
 }
 
+export async function requireSuperAdmin(
+  request: AuthenticatedRequest,
+  database: DatabaseService,
+): Promise<SupportSession> {
+  const support = await requireAdminPortal(request, database);
+  if (support.role !== "super_admin") {
+    throw new ForbiddenException("This action requires super-admin access.");
+  }
+  return support;
+}
+
 export function requireIdempotency(request: AuthenticatedRequest) {
   const rawKey = request.headers["idempotency-key"];
   const key = Array.isArray(rawKey) ? rawKey[0] : rawKey;
