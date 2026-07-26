@@ -420,6 +420,118 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/habit-recommendations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["getHabitRecommendations"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/preferences": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["updatePreferences"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/prayer-times": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getPrayerTimes"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/prayers/{prayer}/logs/{localDate}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["checkInPrayer"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/habits/{habitId}/reminder": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["updateHabitReminder"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/push/installations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["registerFirebaseInstallation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/push/installations/{installationId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["unregisterFirebaseInstallation"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -500,6 +612,23 @@ export interface components {
             suspended_at?: string | null;
             /** Format: date-time */
             deleted_at?: string | null;
+            /** Format: date-time */
+            onboarding_completed_at?: string | null;
+            goal_preferences?: components["schemas"]["GoalPreference"][];
+            starting_pace?: components["schemas"]["StartingPace"];
+            religion_preference?: components["schemas"]["ReligionPreference"];
+            daily_digest_time?: string;
+            daily_digest_enabled?: boolean;
+            latitude?: number | string | null;
+            longitude?: number | string | null;
+            madhab?: components["schemas"]["Madhab"] | null;
+            prayer_calculation_method?: components["schemas"]["PrayerCalculationMethod"] | null;
+            prayer_reminders?: {
+                prayer_name: components["schemas"]["PrayerName"];
+                enabled: boolean;
+                offset_minutes: number;
+            }[];
+            push_enabled?: boolean;
         } & {
             [key: string]: unknown;
         };
@@ -517,12 +646,14 @@ export interface components {
         };
         OnboardingInput: {
             name: string;
-            timezone: string;
             /** @enum {string} */
             units: "metric" | "imperial";
-            /** @enum {string} */
-            faithPreference: "none" | "muslim";
-            prayerEnabled: boolean;
+            goals: components["schemas"]["GoalPreference"][];
+            pace: components["schemas"]["StartingPace"];
+            religion: components["schemas"]["ReligionPreference"];
+            dailyDigestTime: string;
+            dailyDigestEnabled: boolean;
+            prayerSetup: components["schemas"]["PrayerSetup"] | null;
             templateIds: string[];
         };
         CreateHabitInput: components["schemas"]["TemplateHabitInput"] | components["schemas"]["CustomHabitInput"];
@@ -566,6 +697,8 @@ export interface components {
             frequency: components["schemas"]["Frequency"];
             /** @enum {string} */
             state: "active" | "paused" | "archived";
+            reminder_enabled?: boolean;
+            reminder_time?: string | null;
         } & {
             [key: string]: unknown;
         };
@@ -580,6 +713,8 @@ export interface components {
             /** @enum {string} */
             habit_type: "do" | "avoid" | "count" | "duration";
             active?: boolean;
+            goal_tags?: components["schemas"]["GoalPreference"][];
+            recommendation_priority?: number;
         } & {
             [key: string]: unknown;
         };
@@ -626,6 +761,94 @@ export interface components {
             fieldErrors?: {
                 [key: string]: string[];
             };
+        };
+        /** @enum {string} */
+        GoalPreference: "movement" | "nutrition" | "learning" | "sleep" | "mindfulness";
+        /** @enum {string} */
+        StartingPace: "light" | "balanced" | "ambitious";
+        /** @enum {string} */
+        ReligionPreference: "muslim" | "other" | "unspecified";
+        /** @enum {string} */
+        Madhab: "hanafi" | "shafi" | "maliki" | "hanbali";
+        /** @enum {string} */
+        PrayerCalculationMethod: "karachi" | "muslim_world_league" | "egyptian" | "umm_al_qura" | "dubai" | "qatar" | "kuwait" | "moonsighting_committee" | "singapore" | "turkey" | "tehran" | "north_america";
+        /** @enum {string} */
+        PrayerName: "fajr" | "dhuhr" | "asr" | "maghrib" | "isha";
+        PrayerReminder: {
+            prayer: components["schemas"]["PrayerName"];
+            enabled: boolean;
+            offsetMinutes: number;
+        };
+        PrayerSetup: {
+            latitude: number;
+            longitude: number;
+            timezone: string;
+            madhab: components["schemas"]["Madhab"];
+            calculationMethod: components["schemas"]["PrayerCalculationMethod"];
+            reminders: components["schemas"]["PrayerReminder"][];
+        };
+        RecommendationInput: {
+            goals: components["schemas"]["GoalPreference"][];
+            pace: components["schemas"]["StartingPace"];
+        };
+        PreferencesInput: {
+            goals: components["schemas"]["GoalPreference"][];
+            pace: components["schemas"]["StartingPace"];
+            religion: components["schemas"]["ReligionPreference"];
+            dailyDigestTime: string;
+            dailyDigestEnabled: boolean;
+            prayerSetup: components["schemas"]["PrayerSetup"] | null;
+        };
+        PrayerSchedule: {
+            /** Format: date */
+            date: string;
+            timezone: string;
+            madhab: components["schemas"]["Madhab"];
+            calculationMethod: components["schemas"]["PrayerCalculationMethod"];
+            prayers: {
+                name: components["schemas"]["PrayerName"];
+                /** Format: date-time */
+                time: string;
+                /** @enum {string|null} */
+                status: "on_time" | "late" | "missed" | null;
+            }[];
+            nextPrayer: {
+                name: components["schemas"]["PrayerName"];
+                /** Format: date-time */
+                time: string;
+            } | null;
+        };
+        PrayerCheckInInput: {
+            /** @enum {string} */
+            status: "on_time" | "late" | "missed";
+        };
+        PrayerLog: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            user_id: string;
+            /** Format: date */
+            local_date: string;
+            prayer_name: components["schemas"]["PrayerName"];
+            /** @enum {string} */
+            status: "on_time" | "late" | "missed";
+        };
+        HabitReminderInput: {
+            /** @constant */
+            enabled: true;
+            time: string;
+        } | {
+            /** @constant */
+            enabled: false;
+            time?: null | string;
+        };
+        FirebaseInstallationInput: {
+            installationId: string;
+            /**
+             * @default web
+             * @constant
+             */
+            platform: "web";
         };
     };
     responses: {
@@ -1291,6 +1514,195 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    getHabitRecommendations: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RecommendationInput"];
+            };
+        };
+        responses: {
+            /** @description Ranked habit recommendations. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HabitTemplate"][];
+                };
+            };
+            400: components["responses"]["Error"];
+        };
+    };
+    updatePreferences: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PreferencesInput"];
+            };
+        };
+        responses: {
+            /** @description Preferences updated. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @constant */
+                        updated?: true;
+                    };
+                };
+            };
+            400: components["responses"]["Error"];
+        };
+    };
+    getPrayerTimes: {
+        parameters: {
+            query?: {
+                date?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Calculated prayer schedule. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PrayerSchedule"];
+                };
+            };
+            400: components["responses"]["Error"];
+        };
+    };
+    checkInPrayer: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                prayer: components["schemas"]["PrayerName"];
+                localDate: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PrayerCheckInInput"];
+            };
+        };
+        responses: {
+            /** @description Prayer check-in saved. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PrayerLog"];
+                };
+            };
+            400: components["responses"]["Error"];
+        };
+    };
+    updateHabitReminder: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                habitId: components["parameters"]["HabitId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["HabitReminderInput"];
+            };
+        };
+        responses: {
+            /** @description Habit reminder updated. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        enabled: boolean;
+                        time: string | null;
+                    };
+                };
+            };
+            400: components["responses"]["Error"];
+        };
+    };
+    registerFirebaseInstallation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FirebaseInstallationInput"];
+            };
+        };
+        responses: {
+            /** @description Firebase installation registered. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @constant */
+                        registered?: true;
+                    };
+                };
+            };
+            400: components["responses"]["Error"];
+        };
+    };
+    unregisterFirebaseInstallation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                installationId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Firebase installation deactivated. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @constant */
+                        unregistered?: true;
+                    };
+                };
             };
         };
     };

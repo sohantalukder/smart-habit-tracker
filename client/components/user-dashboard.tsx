@@ -11,6 +11,7 @@ import {
   Plus,
   RefreshCw,
   ShieldCheck,
+  Settings,
   Sprout,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -18,12 +19,14 @@ import { toast } from "sonner";
 import { HabitCreateDialog } from "./habit-create-dialog";
 import { apiRequest } from "../lib/api";
 import type {
-  Habit,
   HabitLog,
   HabitTemplate,
   NotificationDelivery,
-  Profile,
   TodayHabit,
+} from "../lib/api/types";
+import type {
+  ExperienceProfile,
+  HabitWithReminder,
 } from "../lib/api/types";
 import {
   habitProgress,
@@ -31,11 +34,14 @@ import {
   localDateString,
   profileDisplayName,
 } from "../lib/dashboard";
+import { PrayerPanel } from "./prayer-panel";
+import { SettingsPanel } from "./settings-panel";
+import { unregisterPushNotifications } from "@/lib/firebase-messaging";
 
 type DashboardData = {
-  profile: Profile;
+  profile: ExperienceProfile;
   habits: TodayHabit[];
-  allHabits: Habit[];
+  allHabits: HabitWithReminder[];
   templates: HabitTemplate[];
   notifications: NotificationDelivery[];
 };
@@ -53,9 +59,9 @@ export function UserDashboard() {
     setError("");
     try {
       const [profile, habits, allHabits, templates, notifications] = await Promise.all([
-        apiRequest<Profile>("/profile"),
+        apiRequest<ExperienceProfile>("/profile"),
         apiRequest<TodayHabit[]>(`/today?date=${localDate}`),
-        apiRequest<Habit[]>("/habits"),
+        apiRequest<HabitWithReminder[]>("/habits"),
         apiRequest<HabitTemplate[]>("/habit-templates"),
         apiRequest<NotificationDelivery[]>("/notifications"),
       ]);
@@ -75,7 +81,7 @@ export function UserDashboard() {
   async function refreshHabits() {
     const [habits, allHabits, templates] = await Promise.all([
       apiRequest<TodayHabit[]>(`/today?date=${localDate}`),
-      apiRequest<Habit[]>("/habits"),
+      apiRequest<HabitWithReminder[]>("/habits"),
       apiRequest<HabitTemplate[]>("/habit-templates"),
     ]);
     setData((current) => current
@@ -86,6 +92,18 @@ export function UserDashboard() {
   useEffect(() => {
     void loadDashboard();
   }, [loadDashboard]);
+
+  useEffect(() => {
+    const refreshNotifications = async () => {
+      const notifications = await apiRequest<NotificationDelivery[]>("/notifications")
+        .catch(() => null);
+      if (notifications) {
+        setData((current) => current ? { ...current, notifications } : current);
+      }
+    };
+    window.addEventListener("bloom:notification", refreshNotifications);
+    return () => window.removeEventListener("bloom:notification", refreshNotifications);
+  }, []);
 
   async function toggleHabit(habit: TodayHabit) {
     if (!data) return;
@@ -142,6 +160,7 @@ export function UserDashboard() {
 
   async function signOut() {
     setSigningOut(true);
+    await unregisterPushNotifications().catch(() => null);
     await fetch("/api/auth/logout", { method: "POST" }).catch(() => null);
     window.location.assign("/");
   }
@@ -192,7 +211,11 @@ export function UserDashboard() {
           <p>YOUR PRIVATE SPACE</p>
           <nav aria-label="Account sections">
             <a href="#today" className="active"><Leaf size={18} /> Today</a>
+            {data.profile.religion_preference === "muslim" && (
+              <a href="#prayers"><Bell size={18} /> Prayers</a>
+            )}
             <a href="#inbox"><Inbox size={18} /> Inbox <span>{data.notifications.length}</span></a>
+            <a href="#settings"><Settings size={18} /> Settings</a>
           </nav>
           <div><ShieldCheck size={22} /><strong>Private by design</strong><p>Only your authenticated account can see this page.</p></div>
         </aside>
@@ -220,6 +243,10 @@ export function UserDashboard() {
               <span><strong>{percentage}%</strong><small>complete</small></span>
             </div>
           </section>
+
+          {data.profile.religion_preference === "muslim" && (
+            <PrayerPanel localDate={localDate} />
+          )}
 
           <section className="honest-habits" aria-labelledby="today-habits-title">
             <div className="honest-section-title">
@@ -287,6 +314,12 @@ export function UserDashboard() {
               </div>
             )}
           </section>
+
+          <SettingsPanel
+            profile={data.profile}
+            habits={data.allHabits}
+            onSaved={loadDashboard}
+          />
         </div>
       </div>
       <HabitCreateDialog

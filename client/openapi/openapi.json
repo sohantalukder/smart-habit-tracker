@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Bloom Smart Habit REST API",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "description": "Versioned API contract for web and native mobile clients."
   },
   "servers": [
@@ -63,7 +63,9 @@
           "required": true,
           "content": {
             "application/json": {
-              "schema": { "$ref": "#/components/schemas/SignupInput" }
+              "schema": {
+                "$ref": "#/components/schemas/SignupInput"
+              }
             }
           }
         },
@@ -72,13 +74,21 @@
             "description": "Verification email requested.",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/VerificationRequired" }
+                "schema": {
+                  "$ref": "#/components/schemas/VerificationRequired"
+                }
               }
             }
           },
-          "400": { "$ref": "#/components/responses/Error" },
-          "429": { "$ref": "#/components/responses/Error" },
-          "503": { "$ref": "#/components/responses/Error" }
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "429": {
+            "$ref": "#/components/responses/Error"
+          },
+          "503": {
+            "$ref": "#/components/responses/Error"
+          }
         }
       }
     },
@@ -90,7 +100,9 @@
           "required": true,
           "content": {
             "application/json": {
-              "schema": { "$ref": "#/components/schemas/EmailInput" }
+              "schema": {
+                "$ref": "#/components/schemas/EmailInput"
+              }
             }
           }
         },
@@ -99,13 +111,21 @@
             "description": "Verification email requested.",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/VerificationRequired" }
+                "schema": {
+                  "$ref": "#/components/schemas/VerificationRequired"
+                }
               }
             }
           },
-          "400": { "$ref": "#/components/responses/Error" },
-          "429": { "$ref": "#/components/responses/Error" },
-          "503": { "$ref": "#/components/responses/Error" }
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "429": {
+            "$ref": "#/components/responses/Error"
+          },
+          "503": {
+            "$ref": "#/components/responses/Error"
+          }
         }
       }
     },
@@ -117,7 +137,9 @@
           "required": true,
           "content": {
             "application/json": {
-              "schema": { "$ref": "#/components/schemas/VerificationInput" }
+              "schema": {
+                "$ref": "#/components/schemas/VerificationInput"
+              }
             }
           }
         },
@@ -126,12 +148,18 @@
             "description": "Email verified and session created.",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/AuthSession" }
+                "schema": {
+                  "$ref": "#/components/schemas/AuthSession"
+                }
               }
             }
           },
-          "400": { "$ref": "#/components/responses/Error" },
-          "429": { "$ref": "#/components/responses/Error" }
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "429": {
+            "$ref": "#/components/responses/Error"
+          }
         }
       }
     },
@@ -143,7 +171,9 @@
           "required": true,
           "content": {
             "application/json": {
-              "schema": { "$ref": "#/components/schemas/LoginInput" }
+              "schema": {
+                "$ref": "#/components/schemas/LoginInput"
+              }
             }
           }
         },
@@ -152,13 +182,21 @@
             "description": "Authenticated session.",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/AuthSession" }
+                "schema": {
+                  "$ref": "#/components/schemas/AuthSession"
+                }
               }
             }
           },
-          "401": { "$ref": "#/components/responses/Error" },
-          "403": { "$ref": "#/components/responses/Error" },
-          "429": { "$ref": "#/components/responses/Error" }
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "429": {
+            "$ref": "#/components/responses/Error"
+          }
         }
       }
     },
@@ -172,15 +210,21 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "required": ["user"],
+                  "required": [
+                    "user"
+                  ],
                   "properties": {
-                    "user": { "$ref": "#/components/schemas/AuthUser" }
+                    "user": {
+                      "$ref": "#/components/schemas/AuthUser"
+                    }
                   }
                 }
               }
             }
           },
-          "401": { "$ref": "#/components/responses/Error" }
+          "401": {
+            "$ref": "#/components/responses/Error"
+          }
         }
       }
     },
@@ -194,15 +238,22 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "required": ["loggedOut"],
+                  "required": [
+                    "loggedOut"
+                  ],
                   "properties": {
-                    "loggedOut": { "type": "boolean", "const": true }
+                    "loggedOut": {
+                      "type": "boolean",
+                      "const": true
+                    }
                   }
                 }
               }
             }
           },
-          "401": { "$ref": "#/components/responses/Error" }
+          "401": {
+            "$ref": "#/components/responses/Error"
+          }
         }
       }
     },
@@ -246,7 +297,9 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "required": ["completed"],
+                  "required": [
+                    "completed"
+                  ],
                   "properties": {
                     "completed": {
                       "type": "boolean",
@@ -499,7 +552,10 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "required": ["data", "count"],
+                  "required": [
+                    "data",
+                    "count"
+                  ],
                   "properties": {
                     "data": {
                       "type": "array",
@@ -544,7 +600,9 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["suspended"],
+                "required": [
+                  "suspended"
+                ],
                 "properties": {
                   "suspended": {
                     "type": "boolean"
@@ -715,6 +773,277 @@
           }
         }
       }
+    },
+    "/habit-recommendations": {
+      "post": {
+        "operationId": "getHabitRecommendations",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecommendationInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Ranked habit recommendations.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/HabitTemplate"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/preferences": {
+      "put": {
+        "operationId": "updatePreferences",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PreferencesInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Preferences updated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "updated": {
+                      "type": "boolean",
+                      "const": true
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/prayer-times": {
+      "get": {
+        "operationId": "getPrayerTimes",
+        "parameters": [
+          {
+            "name": "date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Calculated prayer schedule.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PrayerSchedule"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/prayers/{prayer}/logs/{localDate}": {
+      "put": {
+        "operationId": "checkInPrayer",
+        "parameters": [
+          {
+            "name": "prayer",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/PrayerName"
+            }
+          },
+          {
+            "name": "localDate",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PrayerCheckInInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Prayer check-in saved.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PrayerLog"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/habits/{habitId}/reminder": {
+      "put": {
+        "operationId": "updateHabitReminder",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/HabitId"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HabitReminderInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Habit reminder updated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "enabled",
+                    "time"
+                  ],
+                  "properties": {
+                    "enabled": {
+                      "type": "boolean"
+                    },
+                    "time": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/push/installations": {
+      "post": {
+        "operationId": "registerFirebaseInstallation",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FirebaseInstallationInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Firebase installation registered.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "registered": {
+                      "type": "boolean",
+                      "const": true
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/push/installations/{installationId}": {
+      "delete": {
+        "operationId": "unregisterFirebaseInstallation",
+        "parameters": [
+          {
+            "name": "installationId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Firebase installation deactivated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "unregistered": {
+                      "type": "boolean",
+                      "const": true
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -761,7 +1090,11 @@
     "schemas": {
       "Liveness": {
         "type": "object",
-        "required": ["status", "service", "timestamp"],
+        "required": [
+          "status",
+          "service",
+          "timestamp"
+        ],
         "properties": {
           "status": {
             "type": "string",
@@ -779,7 +1112,11 @@
       },
       "Readiness": {
         "type": "object",
-        "required": ["status", "dependencies", "timestamp"],
+        "required": [
+          "status",
+          "dependencies",
+          "timestamp"
+        ],
         "properties": {
           "status": {
             "type": "string",
@@ -787,7 +1124,10 @@
           },
           "dependencies": {
             "type": "object",
-            "required": ["postgres", "queue"],
+            "required": [
+              "postgres",
+              "queue"
+            ],
             "properties": {
               "postgres": {
                 "type": "string",
@@ -807,64 +1147,139 @@
       },
       "SignupInput": {
         "type": "object",
-        "required": ["name", "email", "password"],
+        "required": [
+          "name",
+          "email",
+          "password"
+        ],
         "properties": {
-          "name": { "type": "string", "minLength": 2, "maxLength": 80 },
-          "email": { "type": "string", "format": "email", "maxLength": 254 },
-          "password": { "type": "string", "minLength": 8, "maxLength": 128 }
+          "name": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 80
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "maxLength": 254
+          },
+          "password": {
+            "type": "string",
+            "minLength": 8,
+            "maxLength": 128
+          }
         }
       },
       "LoginInput": {
         "type": "object",
-        "required": ["email", "password"],
+        "required": [
+          "email",
+          "password"
+        ],
         "properties": {
-          "email": { "type": "string", "format": "email", "maxLength": 254 },
-          "password": { "type": "string", "minLength": 1, "maxLength": 128 }
+          "email": {
+            "type": "string",
+            "format": "email",
+            "maxLength": 254
+          },
+          "password": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          }
         }
       },
       "EmailInput": {
         "type": "object",
-        "required": ["email"],
+        "required": [
+          "email"
+        ],
         "properties": {
-          "email": { "type": "string", "format": "email", "maxLength": 254 }
+          "email": {
+            "type": "string",
+            "format": "email",
+            "maxLength": 254
+          }
         }
       },
       "VerificationInput": {
         "type": "object",
-        "required": ["token"],
+        "required": [
+          "token"
+        ],
         "properties": {
-          "token": { "type": "string", "minLength": 32, "maxLength": 200 }
+          "token": {
+            "type": "string",
+            "minLength": 32,
+            "maxLength": 200
+          }
         }
       },
       "VerificationRequired": {
         "type": "object",
-        "required": ["requiresVerification", "message"],
+        "required": [
+          "requiresVerification",
+          "message"
+        ],
         "properties": {
-          "requiresVerification": { "type": "boolean", "const": true },
-          "message": { "type": "string" }
+          "requiresVerification": {
+            "type": "boolean",
+            "const": true
+          },
+          "message": {
+            "type": "string"
+          }
         }
       },
       "AuthUser": {
         "type": "object",
-        "required": ["id", "email", "name"],
+        "required": [
+          "id",
+          "email",
+          "name"
+        ],
         "properties": {
-          "id": { "type": "string", "format": "uuid" },
-          "email": { "type": "string", "format": "email" },
-          "name": { "type": "string" }
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "name": {
+            "type": "string"
+          }
         }
       },
       "AuthSession": {
         "type": "object",
-        "required": ["accessToken", "expiresAt", "user"],
+        "required": [
+          "accessToken",
+          "expiresAt",
+          "user"
+        ],
         "properties": {
-          "accessToken": { "type": "string" },
-          "expiresAt": { "type": "string", "format": "date-time" },
-          "user": { "$ref": "#/components/schemas/AuthUser" }
+          "accessToken": {
+            "type": "string"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "user": {
+            "$ref": "#/components/schemas/AuthUser"
+          }
         }
       },
       "SupportSession": {
         "type": "object",
-        "required": ["userId", "email", "name", "role"],
+        "required": [
+          "userId",
+          "email",
+          "name",
+          "role"
+        ],
         "properties": {
           "userId": {
             "type": "string",
@@ -879,13 +1294,21 @@
           },
           "role": {
             "type": "string",
-            "enum": ["support", "super_admin"]
+            "enum": [
+              "support",
+              "super_admin"
+            ]
           }
         }
       },
       "Profile": {
         "type": "object",
-        "required": ["id", "email", "name", "timezone"],
+        "required": [
+          "id",
+          "email",
+          "name",
+          "timezone"
+        ],
         "properties": {
           "id": {
             "type": "string",
@@ -902,12 +1325,102 @@
             "type": "string"
           },
           "suspended_at": {
-            "type": ["string", "null"],
+            "type": [
+              "string",
+              "null"
+            ],
             "format": "date-time"
           },
           "deleted_at": {
-            "type": ["string", "null"],
+            "type": [
+              "string",
+              "null"
+            ],
             "format": "date-time"
+          },
+          "onboarding_completed_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "goal_preferences": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GoalPreference"
+            }
+          },
+          "starting_pace": {
+            "$ref": "#/components/schemas/StartingPace"
+          },
+          "religion_preference": {
+            "$ref": "#/components/schemas/ReligionPreference"
+          },
+          "daily_digest_time": {
+            "type": "string"
+          },
+          "daily_digest_enabled": {
+            "type": "boolean"
+          },
+          "latitude": {
+            "type": [
+              "number",
+              "string",
+              "null"
+            ]
+          },
+          "longitude": {
+            "type": [
+              "number",
+              "string",
+              "null"
+            ]
+          },
+          "madhab": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Madhab"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "prayer_calculation_method": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PrayerCalculationMethod"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "prayer_reminders": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "prayer_name",
+                "enabled",
+                "offset_minutes"
+              ],
+              "properties": {
+                "prayer_name": {
+                  "$ref": "#/components/schemas/PrayerName"
+                },
+                "enabled": {
+                  "type": "boolean"
+                },
+                "offset_minutes": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "push_enabled": {
+            "type": "boolean"
           }
         },
         "additionalProperties": true
@@ -916,7 +1429,9 @@
         "oneOf": [
           {
             "type": "object",
-            "required": ["kind"],
+            "required": [
+              "kind"
+            ],
             "properties": {
               "kind": {
                 "const": "daily"
@@ -925,7 +1440,10 @@
           },
           {
             "type": "object",
-            "required": ["kind", "target"],
+            "required": [
+              "kind",
+              "target"
+            ],
             "properties": {
               "kind": {
                 "const": "weekly_target"
@@ -939,7 +1457,10 @@
           },
           {
             "type": "object",
-            "required": ["kind", "days"],
+            "required": [
+              "kind",
+              "days"
+            ],
             "properties": {
               "kind": {
                 "const": "weekdays"
@@ -961,10 +1482,13 @@
         "type": "object",
         "required": [
           "name",
-          "timezone",
           "units",
-          "faithPreference",
-          "prayerEnabled",
+          "goals",
+          "pace",
+          "religion",
+          "dailyDigestTime",
+          "dailyDigestEnabled",
+          "prayerSetup",
           "templateIds"
         ],
         "properties": {
@@ -973,22 +1497,50 @@
             "minLength": 2,
             "maxLength": 80
           },
-          "timezone": {
-            "type": "string"
-          },
           "units": {
             "type": "string",
-            "enum": ["metric", "imperial"]
+            "enum": [
+              "metric",
+              "imperial"
+            ]
           },
-          "faithPreference": {
+          "goals": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 5,
+            "uniqueItems": true,
+            "items": {
+              "$ref": "#/components/schemas/GoalPreference"
+            }
+          },
+          "pace": {
+            "$ref": "#/components/schemas/StartingPace"
+          },
+          "religion": {
+            "$ref": "#/components/schemas/ReligionPreference"
+          },
+          "dailyDigestTime": {
             "type": "string",
-            "enum": ["none", "muslim"]
+            "pattern": "^([01]\\\\d|2[0-3]):[0-5]\\\\d$"
           },
-          "prayerEnabled": {
+          "dailyDigestEnabled": {
             "type": "boolean"
+          },
+          "prayerSetup": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PrayerSetup"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "templateIds": {
             "type": "array",
+            "minItems": 1,
+            "maxItems": 6,
+            "uniqueItems": true,
             "items": {
               "type": "string",
               "format": "uuid"
@@ -1008,7 +1560,9 @@
       },
       "TemplateHabitInput": {
         "type": "object",
-        "required": ["templateId"],
+        "required": [
+          "templateId"
+        ],
         "properties": {
           "templateId": {
             "type": "string",
@@ -1038,18 +1592,37 @@
           },
           "category": {
             "type": "string",
-            "enum": ["diet", "prayer", "steps", "gym", "food", "learning", "other"]
+            "enum": [
+              "diet",
+              "prayer",
+              "steps",
+              "gym",
+              "food",
+              "learning",
+              "other"
+            ]
           },
           "type": {
             "type": "string",
-            "enum": ["do", "avoid", "count", "duration"]
+            "enum": [
+              "do",
+              "avoid",
+              "count",
+              "duration"
+            ]
           },
           "target": {
-            "type": ["number", "null"],
+            "type": [
+              "number",
+              "null"
+            ],
             "exclusiveMinimum": 0
           },
           "unit": {
-            "type": ["string", "null"],
+            "type": [
+              "string",
+              "null"
+            ],
             "maxLength": 24
           },
           "frequency": {
@@ -1063,29 +1636,58 @@
       },
       "CheckInInput": {
         "type": "object",
-        "required": ["status"],
+        "required": [
+          "status"
+        ],
         "properties": {
           "status": {
             "type": "string",
-            "enum": ["done", "skipped", "partial"]
+            "enum": [
+              "done",
+              "skipped",
+              "partial"
+            ]
           },
           "value": {
-            "type": ["number", "null"],
+            "type": [
+              "number",
+              "null"
+            ],
             "minimum": 0
           },
           "note": {
-            "type": ["string", "null"],
+            "type": [
+              "string",
+              "null"
+            ],
             "maxLength": 1000
           },
           "prayerStatus": {
-            "type": ["string", "null"],
-            "enum": ["on_time", "late", "missed", null]
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "on_time",
+              "late",
+              "missed",
+              null
+            ]
           }
         }
       },
       "Habit": {
         "type": "object",
-        "required": ["id", "user_id", "name", "icon", "category", "habit_type", "frequency", "state"],
+        "required": [
+          "id",
+          "user_id",
+          "name",
+          "icon",
+          "category",
+          "habit_type",
+          "frequency",
+          "state"
+        ],
         "properties": {
           "id": {
             "type": "string",
@@ -1106,27 +1708,56 @@
           },
           "habit_type": {
             "type": "string",
-            "enum": ["do", "avoid", "count", "duration"]
+            "enum": [
+              "do",
+              "avoid",
+              "count",
+              "duration"
+            ]
           },
           "target": {
-            "type": ["number", "null"]
+            "type": [
+              "number",
+              "null"
+            ]
           },
           "unit": {
-            "type": ["string", "null"]
+            "type": [
+              "string",
+              "null"
+            ]
           },
           "frequency": {
             "$ref": "#/components/schemas/Frequency"
           },
           "state": {
             "type": "string",
-            "enum": ["active", "paused", "archived"]
+            "enum": [
+              "active",
+              "paused",
+              "archived"
+            ]
+          },
+          "reminder_enabled": {
+            "type": "boolean"
+          },
+          "reminder_time": {
+            "type": [
+              "string",
+              "null"
+            ]
           }
         },
         "additionalProperties": true
       },
       "HabitTemplate": {
         "type": "object",
-        "required": ["name", "icon", "category", "habit_type"],
+        "required": [
+          "name",
+          "icon",
+          "category",
+          "habit_type"
+        ],
         "properties": {
           "id": {
             "type": "string",
@@ -1149,17 +1780,37 @@
           },
           "habit_type": {
             "type": "string",
-            "enum": ["do", "avoid", "count", "duration"]
+            "enum": [
+              "do",
+              "avoid",
+              "count",
+              "duration"
+            ]
           },
           "active": {
             "type": "boolean"
+          },
+          "goal_tags": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GoalPreference"
+            }
+          },
+          "recommendation_priority": {
+            "type": "integer"
           }
         },
         "additionalProperties": true
       },
       "HabitLog": {
         "type": "object",
-        "required": ["id", "habit_id", "user_id", "local_date", "status"],
+        "required": [
+          "id",
+          "habit_id",
+          "user_id",
+          "local_date",
+          "status"
+        ],
         "properties": {
           "id": {
             "type": "string",
@@ -1179,20 +1830,37 @@
           },
           "status": {
             "type": "string",
-            "enum": ["done", "skipped", "partial"]
+            "enum": [
+              "done",
+              "skipped",
+              "partial"
+            ]
           },
           "value": {
-            "type": ["number", "null"]
+            "type": [
+              "number",
+              "null"
+            ]
           },
           "note": {
-            "type": ["string", "null"]
+            "type": [
+              "string",
+              "null"
+            ]
           }
         },
         "additionalProperties": true
       },
       "NotificationDelivery": {
         "type": "object",
-        "required": ["id", "channel", "title", "body", "state", "scheduled_at"],
+        "required": [
+          "id",
+          "channel",
+          "title",
+          "body",
+          "state",
+          "scheduled_at"
+        ],
         "properties": {
           "id": {
             "type": "string",
@@ -1200,7 +1868,11 @@
           },
           "channel": {
             "type": "string",
-            "enum": ["push", "email", "in_app"]
+            "enum": [
+              "push",
+              "email",
+              "in_app"
+            ]
           },
           "title": {
             "type": "string"
@@ -1210,7 +1882,13 @@
           },
           "state": {
             "type": "string",
-            "enum": ["scheduled", "processing", "sent", "failed", "cancelled"]
+            "enum": [
+              "scheduled",
+              "processing",
+              "sent",
+              "failed",
+              "cancelled"
+            ]
           },
           "scheduled_at": {
             "type": "string",
@@ -1221,7 +1899,11 @@
       },
       "AnnouncementInput": {
         "type": "object",
-        "required": ["title", "body", "channels"],
+        "required": [
+          "title",
+          "body",
+          "channels"
+        ],
         "properties": {
           "title": {
             "type": "string",
@@ -1238,14 +1920,23 @@
             "minItems": 1,
             "items": {
               "type": "string",
-              "enum": ["push", "email", "in_app"]
+              "enum": [
+                "push",
+                "email",
+                "in_app"
+              ]
             }
           }
         }
       },
       "ErrorEnvelope": {
         "type": "object",
-        "required": ["code", "message", "correlationId", "retryable"],
+        "required": [
+          "code",
+          "message",
+          "correlationId",
+          "retryable"
+        ],
         "properties": {
           "code": {
             "type": "string"
@@ -1267,6 +1958,382 @@
                 "type": "string"
               }
             }
+          }
+        }
+      },
+      "GoalPreference": {
+        "type": "string",
+        "enum": [
+          "movement",
+          "nutrition",
+          "learning",
+          "sleep",
+          "mindfulness"
+        ]
+      },
+      "StartingPace": {
+        "type": "string",
+        "enum": [
+          "light",
+          "balanced",
+          "ambitious"
+        ]
+      },
+      "ReligionPreference": {
+        "type": "string",
+        "enum": [
+          "muslim",
+          "other",
+          "unspecified"
+        ]
+      },
+      "Madhab": {
+        "type": "string",
+        "enum": [
+          "hanafi",
+          "shafi",
+          "maliki",
+          "hanbali"
+        ]
+      },
+      "PrayerCalculationMethod": {
+        "type": "string",
+        "enum": [
+          "karachi",
+          "muslim_world_league",
+          "egyptian",
+          "umm_al_qura",
+          "dubai",
+          "qatar",
+          "kuwait",
+          "moonsighting_committee",
+          "singapore",
+          "turkey",
+          "tehran",
+          "north_america"
+        ]
+      },
+      "PrayerName": {
+        "type": "string",
+        "enum": [
+          "fajr",
+          "dhuhr",
+          "asr",
+          "maghrib",
+          "isha"
+        ]
+      },
+      "PrayerReminder": {
+        "type": "object",
+        "required": [
+          "prayer",
+          "enabled",
+          "offsetMinutes"
+        ],
+        "properties": {
+          "prayer": {
+            "$ref": "#/components/schemas/PrayerName"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "offsetMinutes": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 120
+          }
+        }
+      },
+      "PrayerSetup": {
+        "type": "object",
+        "required": [
+          "latitude",
+          "longitude",
+          "timezone",
+          "madhab",
+          "calculationMethod",
+          "reminders"
+        ],
+        "properties": {
+          "latitude": {
+            "type": "number",
+            "minimum": -90,
+            "maximum": 90
+          },
+          "longitude": {
+            "type": "number",
+            "minimum": -180,
+            "maximum": 180
+          },
+          "timezone": {
+            "type": "string"
+          },
+          "madhab": {
+            "$ref": "#/components/schemas/Madhab"
+          },
+          "calculationMethod": {
+            "$ref": "#/components/schemas/PrayerCalculationMethod"
+          },
+          "reminders": {
+            "type": "array",
+            "minItems": 5,
+            "maxItems": 5,
+            "items": {
+              "$ref": "#/components/schemas/PrayerReminder"
+            }
+          }
+        }
+      },
+      "RecommendationInput": {
+        "type": "object",
+        "required": [
+          "goals",
+          "pace"
+        ],
+        "properties": {
+          "goals": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 5,
+            "uniqueItems": true,
+            "items": {
+              "$ref": "#/components/schemas/GoalPreference"
+            }
+          },
+          "pace": {
+            "$ref": "#/components/schemas/StartingPace"
+          }
+        }
+      },
+      "PreferencesInput": {
+        "type": "object",
+        "required": [
+          "goals",
+          "pace",
+          "religion",
+          "dailyDigestTime",
+          "dailyDigestEnabled",
+          "prayerSetup"
+        ],
+        "properties": {
+          "goals": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 5,
+            "uniqueItems": true,
+            "items": {
+              "$ref": "#/components/schemas/GoalPreference"
+            }
+          },
+          "pace": {
+            "$ref": "#/components/schemas/StartingPace"
+          },
+          "religion": {
+            "$ref": "#/components/schemas/ReligionPreference"
+          },
+          "dailyDigestTime": {
+            "type": "string",
+            "pattern": "^([01]\\\\d|2[0-3]):[0-5]\\\\d$"
+          },
+          "dailyDigestEnabled": {
+            "type": "boolean"
+          },
+          "prayerSetup": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PrayerSetup"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        }
+      },
+      "PrayerSchedule": {
+        "type": "object",
+        "required": [
+          "date",
+          "timezone",
+          "madhab",
+          "calculationMethod",
+          "prayers",
+          "nextPrayer"
+        ],
+        "properties": {
+          "date": {
+            "type": "string",
+            "format": "date"
+          },
+          "timezone": {
+            "type": "string"
+          },
+          "madhab": {
+            "$ref": "#/components/schemas/Madhab"
+          },
+          "calculationMethod": {
+            "$ref": "#/components/schemas/PrayerCalculationMethod"
+          },
+          "prayers": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "name",
+                "time",
+                "status"
+              ],
+              "properties": {
+                "name": {
+                  "$ref": "#/components/schemas/PrayerName"
+                },
+                "time": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "status": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "enum": [
+                    "on_time",
+                    "late",
+                    "missed",
+                    null
+                  ]
+                }
+              }
+            }
+          },
+          "nextPrayer": {
+            "anyOf": [
+              {
+                "type": "object",
+                "required": [
+                  "name",
+                  "time"
+                ],
+                "properties": {
+                  "name": {
+                    "$ref": "#/components/schemas/PrayerName"
+                  },
+                  "time": {
+                    "type": "string",
+                    "format": "date-time"
+                  }
+                }
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        }
+      },
+      "PrayerCheckInInput": {
+        "type": "object",
+        "required": [
+          "status"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "on_time",
+              "late",
+              "missed"
+            ]
+          }
+        }
+      },
+      "PrayerLog": {
+        "type": "object",
+        "required": [
+          "id",
+          "user_id",
+          "local_date",
+          "prayer_name",
+          "status"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "user_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "local_date": {
+            "type": "string",
+            "format": "date"
+          },
+          "prayer_name": {
+            "$ref": "#/components/schemas/PrayerName"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "on_time",
+              "late",
+              "missed"
+            ]
+          }
+        }
+      },
+      "HabitReminderInput": {
+        "oneOf": [
+          {
+            "type": "object",
+            "required": [
+              "enabled",
+              "time"
+            ],
+            "properties": {
+              "enabled": {
+                "const": true
+              },
+              "time": {
+                "type": "string",
+                "pattern": "^([01]\\\\d|2[0-3]):[0-5]\\\\d$"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "enabled"
+            ],
+            "properties": {
+              "enabled": {
+                "const": false
+              },
+              "time": {
+                "type": [
+                  "null",
+                  "string"
+                ]
+              }
+            }
+          }
+        ]
+      },
+      "FirebaseInstallationInput": {
+        "type": "object",
+        "required": [
+          "installationId"
+        ],
+        "properties": {
+          "installationId": {
+            "type": "string",
+            "minLength": 10,
+            "maxLength": 255
+          },
+          "platform": {
+            "type": "string",
+            "const": "web",
+            "default": "web"
           }
         }
       }

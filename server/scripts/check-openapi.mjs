@@ -6,13 +6,21 @@ const document = JSON.parse(await readFile(path, "utf8"));
 if (document.openapi !== "3.1.0") {
   throw new Error("OpenAPI document must use version 3.1.0.");
 }
-if (
-  !document.paths?.["/admin/session"] ||
-  !document.paths?.["/health/ready"] ||
-  !document.paths?.["/auth/signup"] ||
-  !document.paths?.["/auth/login"] ||
-  !document.paths?.["/auth/verify-email"]
-) {
+const requiredPaths = [
+  "/admin/session",
+  "/health/ready",
+  "/auth/signup",
+  "/auth/login",
+  "/auth/verify-email",
+  "/habit-recommendations",
+  "/onboarding",
+  "/preferences",
+  "/prayer-times",
+  "/prayers/{prayer}/logs/{localDate}",
+  "/habits/{habitId}/reminder",
+  "/push/installations",
+];
+if (requiredPaths.some((path) => !document.paths?.[path])) {
   throw new Error("OpenAPI document is missing required public interfaces.");
 }
 if (!document.components?.securitySchemes?.bearerAuth) {

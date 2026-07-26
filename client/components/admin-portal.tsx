@@ -219,18 +219,19 @@ function AuditPanel({ rows }: { rows: AuditRow[] }) {
 function AnnouncementModal({ onClose, onSent }: { onClose: () => void; onSent: () => void }) {
   const [title,setTitle] = useState("");
   const [body,setBody] = useState("");
+  const [channels,setChannels] = useState<Array<"push"|"email"|"in_app">>(["push","in_app"]);
   const [sending,setSending] = useState(false);
   const [error,setError] = useState("");
   async function send() {
     setSending(true); setError("");
     try {
-      await apiRequest("/admin/announcements", idempotentInit("POST", { title, body, channels: ["in_app"] }));
+      await apiRequest("/admin/announcements", idempotentInit("POST", { title, body, channels }));
       onSent();
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "Could not send announcement.");
     } finally { setSending(false); }
   }
-  return <div className="modal-layer" onMouseDown={(event)=>event.target===event.currentTarget&&onClose()}><Card className="announcement-modal"><button className="modal-close" onClick={onClose}><X size={18}/></button><span><Send size={20}/></span><p>SUPPORT ANNOUNCEMENT</p><h2>Send a warm note</h2><small>Announcements are delivered in-app and recorded in the audit log.</small><label>Title<Input value={title} onChange={(event)=>setTitle(event.target.value)} placeholder="A gentle weekend note"/></label><label>Message<textarea value={body} onChange={(event)=>setBody(event.target.value)} placeholder="Write something useful and encouraging…"/></label>{error&&<div className="form-message">{error}</div>}<footer><Button variant="ghost" onClick={onClose}>Cancel</Button><Button disabled={sending||title.length<2||body.length<2} onClick={send}>{sending?"Sending…":"Send announcement"}</Button></footer></Card></div>;
+  return <div className="modal-layer" onMouseDown={(event)=>event.target===event.currentTarget&&onClose()}><Card className="announcement-modal"><button className="modal-close" onClick={onClose}><X size={18}/></button><span><Send size={20}/></span><p>SUPPORT ANNOUNCEMENT</p><h2>Send a warm note</h2><small>Choose Firebase push, email, in-app delivery, or any combination. Every delivery is audited.</small><label>Title<Input value={title} onChange={(event)=>setTitle(event.target.value)} placeholder="A gentle weekend note"/></label><label>Message<textarea value={body} onChange={(event)=>setBody(event.target.value)} placeholder="Write something useful and encouraging…"/></label><fieldset className="announcement-channels"><legend>Channels</legend>{(["push","email","in_app"] as const).map((channel)=><label key={channel}><input type="checkbox" checked={channels.includes(channel)} onChange={(event)=>setChannels((current)=>event.target.checked?[...current,channel]:current.filter((item)=>item!==channel))}/>{channel.replace("_"," ")}</label>)}</fieldset>{error&&<div className="form-message">{error}</div>}<footer><Button variant="ghost" onClick={onClose}>Cancel</Button><Button disabled={sending||title.length<2||body.length<2||channels.length===0} onClick={send}>{sending?"Sending…":"Send announcement"}</Button></footer></Card></div>;
 }
 
 function PanelTitle({ eyebrow,title }: { eyebrow:string; title:string }) {

@@ -4,8 +4,8 @@
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
     "target": "ES2022",
-    "outDir": "dist/worker",
-    "rootDir": "worker",
+    "outDir": "dist",
+    "rootDir": ".",
     "isolatedModules": false
   },
   "include": ["worker/**/*.ts"]

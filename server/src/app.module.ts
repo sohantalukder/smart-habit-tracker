@@ -12,6 +12,8 @@ import { AuthController } from "./auth/auth.controller";
 import { AuthService } from "./auth/auth.service";
 import { AuthRateLimitService } from "./auth/auth-rate-limit.service";
 import { VerificationEmailService } from "./auth/verification-email.service";
+import { ExperienceController } from "./experience.controller";
+import { PrayerTimeService } from "./prayer/prayer-time.service";
 
 @Module({
   controllers: [
@@ -19,6 +21,7 @@ import { VerificationEmailService } from "./auth/verification-email.service";
     OpenApiController,
     AuthController,
     UserController,
+    ExperienceController,
     AdminController,
   ],
   providers: [
@@ -28,6 +31,7 @@ import { VerificationEmailService } from "./auth/verification-email.service";
     AuthService,
     AuthRateLimitService,
     VerificationEmailService,
+    PrayerTimeService,
     { provide: APP_GUARD, useClass: AuthGuard },
   ],
 })

@@ -14,10 +14,8 @@ import {
 import {
   checkInSchema,
   createHabitSchema,
-  onboardingSchema,
   type CheckInInput,
   type CreateHabitInput,
-  type OnboardingInput,
 } from "./contracts";
 import type { AuthenticatedRequest } from "./auth/auth.guard";
 import { DatabaseService } from "./platform/database.service";
@@ -29,7 +27,31 @@ export class UserController {
   @Get("profile")
   async profile(@Req() request: AuthenticatedRequest) {
     const result = await this.database.query(
-      `select p.*, u.email
+      `select p.*, u.email,
+              coalesce(
+                (
+                  select json_agg(
+                    json_build_object(
+                      'prayer_name', r.prayer_name,
+                      'enabled', r.enabled,
+                      'offset_minutes', r.offset_minutes
+                    )
+                    order by case r.prayer_name
+                      when 'fajr' then 1 when 'dhuhr' then 2 when 'asr' then 3
+                      when 'maghrib' then 4 else 5
+                    end
+                  )
+                  from prayer_reminder_settings r
+                  where r.user_id = p.id
+                ),
+                '[]'::json
+              ) as prayer_reminders,
+              exists (
+                select 1 from firebase_installations f
+                where f.user_id = p.id
+                  and f.active = true
+                  and f.last_seen_at >= now() - interval '30 days'
+              ) as push_enabled
        from profiles p
        join users u on u.id = p.id
        where p.id = $1`,
@@ -39,64 +61,16 @@ export class UserController {
     return result.rows[0];
   }
 
-  @Post("onboarding")
-  async onboarding(
-    @Req() request: AuthenticatedRequest,
-    @Body() input: OnboardingInput,
-  ) {
-    const parsed = onboardingSchema.safeParse(input);
-    if (!parsed.success) throw new BadRequestException(parsed.error.issues);
-    const value = parsed.data;
-    await this.database.transaction(async (client) => {
-      await client.query(
-        `update profiles
-         set name = $2,
-             timezone = $3,
-             units = $4,
-             faith_preference = $5,
-             prayer_enabled = $6,
-             onboarding_completed_at = now(),
-             updated_at = now()
-         where id = $1`,
-        [
-          request.user.id,
-          value.name,
-          value.timezone,
-          value.units,
-          value.faithPreference,
-          value.prayerEnabled && value.faithPreference === "muslim",
-        ],
-      );
-      if (value.templateIds.length) {
-        await client.query(
-          `insert into habits (
-             user_id, template_id, name, icon, category, habit_type,
-             target, unit, frequency
-           )
-           select $1, t.id, t.name, t.icon, t.category, t.habit_type,
-                  t.default_target, t.default_unit, t.default_frequency
-           from habit_templates t
-           where t.id = any($2::uuid[])
-             and not exists (
-               select 1 from habits h
-               where h.user_id = $1 and h.template_id = t.id
-             )`,
-          [request.user.id, value.templateIds],
-        );
-      }
-    });
-    return { completed: true };
-  }
-
   @Get("habit-templates")
   async templates() {
     const result = await this.database.query(
       `select id, slug, name, description, category, habit_type, icon,
               default_target::float8 as default_target, default_unit,
-              default_frequency, active, created_at, updated_at
+              default_frequency, goal_tags, recommendation_priority,
+              active, created_at, updated_at
        from habit_templates
        where active = true
-       order by category, name`,
+       order by recommendation_priority, category, name`,
     );
     return result.rows;
   }
@@ -106,8 +80,15 @@ export class UserController {
     const result = await this.database.query(
       `select id, user_id, template_id, name, icon, category, habit_type,
               target::float8 as target, unit, frequency, forgiving, state,
-              deleted_at, created_at, updated_at
-       from habits
+              deleted_at, created_at, updated_at,
+              reminder_time, reminder_enabled
+       from (
+         select h.*,
+                to_char(r.time_local, 'HH24:MI') as reminder_time,
+                coalesce(r.enabled, false) as reminder_enabled
+         from habits h
+         left join habit_reminders r on r.habit_id = h.id
+       ) habits_with_reminders
        where user_id = $1 and deleted_at is null
        order by created_at`,
       [request.user.id],
@@ -199,8 +180,15 @@ export class UserController {
       this.database.query(
         `select id, user_id, template_id, name, icon, category, habit_type,
                 target::float8 as target, unit, frequency, forgiving, state,
-                deleted_at, created_at, updated_at
-         from habits
+                deleted_at, created_at, updated_at,
+                reminder_time, reminder_enabled
+         from (
+           select h.*,
+                  to_char(r.time_local, 'HH24:MI') as reminder_time,
+                  coalesce(r.enabled, false) as reminder_enabled
+           from habits h
+           left join habit_reminders r on r.habit_id = h.id
+         ) habits_with_reminders
          where user_id = $1 and state = 'active' and deleted_at is null`,
         [request.user.id],
       ),

@@ -54,13 +54,102 @@ export const checkInSchema = z.object({
   note: z.string().max(1000).nullable().default(null),
   prayerStatus: z.enum(["on_time", "late", "missed"]).nullable().default(null),
 });
+export const goalPreferenceSchema = z.enum([
+  "movement",
+  "nutrition",
+  "learning",
+  "sleep",
+  "mindfulness",
+]);
+export const startingPaceSchema = z.enum(["light", "balanced", "ambitious"]);
+export const religionPreferenceSchema = z.enum([
+  "muslim",
+  "other",
+  "unspecified",
+]);
+export const madhabSchema = z.enum(["hanafi", "shafi", "maliki", "hanbali"]);
+export const prayerCalculationMethodSchema = z.enum([
+  "karachi",
+  "muslim_world_league",
+  "egyptian",
+  "umm_al_qura",
+  "dubai",
+  "qatar",
+  "kuwait",
+  "moonsighting_committee",
+  "singapore",
+  "turkey",
+  "tehran",
+  "north_america",
+]);
+export const prayerNameSchema = z.enum([
+  "fajr",
+  "dhuhr",
+  "asr",
+  "maghrib",
+  "isha",
+]);
+export const localTimeSchema = z.string().regex(
+  /^([01]\d|2[0-3]):[0-5]\d$/,
+  "Time must use HH:mm in 24-hour format.",
+);
+export const prayerReminderSchema = z.object({
+  prayer: prayerNameSchema,
+  enabled: z.boolean(),
+  offsetMinutes: z.number().int().min(0).max(120),
+});
+export const prayerSetupSchema = z.object({
+  latitude: z.number().min(-90).max(90),
+  longitude: z.number().min(-180).max(180),
+  timezone: z.string().trim().min(1).max(100),
+  madhab: madhabSchema,
+  calculationMethod: prayerCalculationMethodSchema,
+  reminders: z.array(prayerReminderSchema).length(5).superRefine((reminders, context) => {
+    const names = new Set(reminders.map((reminder) => reminder.prayer));
+    if (names.size !== 5) {
+      context.addIssue({
+        code: "custom",
+        message: "Each prayer must have exactly one reminder setting.",
+      });
+    }
+  }),
+});
+const preferenceFields = {
+  goals: z.array(goalPreferenceSchema).min(1).max(5).refine(
+    (goals) => new Set(goals).size === goals.length,
+    "Goals must be unique.",
+  ),
+  pace: startingPaceSchema,
+  religion: religionPreferenceSchema,
+  dailyDigestTime: localTimeSchema,
+  dailyDigestEnabled: z.boolean().default(true),
+  prayerSetup: prayerSetupSchema.nullable(),
+};
+export const recommendationSchema = z.object({
+  goals: preferenceFields.goals,
+  pace: preferenceFields.pace,
+});
 export const onboardingSchema = z.object({
   name: z.string().min(2).max(80),
-  timezone: z.string().min(1),
   units: z.enum(["metric", "imperial"]),
-  faithPreference: z.enum(["none", "muslim"]),
-  prayerEnabled: z.boolean(),
-  templateIds: z.array(z.uuid()),
+  ...preferenceFields,
+  templateIds: z.array(z.uuid()).min(1).max(6).refine(
+    (templateIds) => new Set(templateIds).size === templateIds.length,
+    "Habit templates must be unique.",
+  ),
+}).superRefine(validatePrayerSetup);
+export const preferencesSchema = z.object(preferenceFields)
+  .superRefine(validatePrayerSetup);
+export const prayerCheckInSchema = z.object({
+  status: z.enum(["on_time", "late", "missed"]),
+});
+export const habitReminderSchema = z.discriminatedUnion("enabled", [
+  z.object({ enabled: z.literal(false), time: z.null().optional() }),
+  z.object({ enabled: z.literal(true), time: localTimeSchema }),
+]);
+export const firebaseInstallationSchema = z.object({
+  installationId: z.string().trim().min(10).max(255),
+  platform: z.literal("web").default("web"),
 });
 export const announcementSchema = z.object({
   title: z.string().min(2).max(100),
@@ -80,3 +169,34 @@ export type LoginInput = z.infer<typeof loginSchema>;
 export type CreateHabitInput = z.infer<typeof createHabitSchema>;
 export type CheckInInput = z.infer<typeof checkInSchema>;
 export type OnboardingInput = z.infer<typeof onboardingSchema>;
+export type PreferencesInput = z.infer<typeof preferencesSchema>;
+export type PrayerCheckInInput = z.infer<typeof prayerCheckInSchema>;
+export type HabitReminderInput = z.infer<typeof habitReminderSchema>;
+export type FirebaseInstallationInput = z.infer<typeof firebaseInstallationSchema>;
+export type PrayerSetupInput = z.infer<typeof prayerSetupSchema>;
+export type PrayerName = z.infer<typeof prayerNameSchema>;
+export type PrayerCalculationMethod = z.infer<typeof prayerCalculationMethodSchema>;
+export type Madhab = z.infer<typeof madhabSchema>;
+
+function validatePrayerSetup(
+  value: {
+    religion: z.infer<typeof religionPreferenceSchema>;
+    prayerSetup: z.infer<typeof prayerSetupSchema> | null;
+  },
+  context: z.RefinementCtx,
+) {
+  if (value.religion === "muslim" && !value.prayerSetup) {
+    context.addIssue({
+      code: "custom",
+      path: ["prayerSetup"],
+      message: "Location and prayer preferences are required for Muslim users.",
+    });
+  }
+  if (value.religion !== "muslim" && value.prayerSetup) {
+    context.addIssue({
+      code: "custom",
+      path: ["prayerSetup"],
+      message: "Prayer preferences are available only when religion is Muslim.",
+    });
+  }
+}

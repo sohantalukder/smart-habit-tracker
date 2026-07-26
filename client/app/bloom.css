@@ -1364,3 +1364,177 @@ textarea {
 @media (max-width: 780px) {
   .admin-stats { grid-template-columns: 1fr; }
 }
+
+/* Preference onboarding */
+.onboarding-shell {
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at 85% 10%, rgba(122, 156, 137, .16), transparent 28%),
+    var(--ledger-paper);
+  display: grid;
+  place-items: center;
+  padding: 42px 20px;
+}
+.onboarding-card {
+  width: min(850px, 100%);
+  background: #fffdf8;
+  border: 1px solid var(--ledger-rule);
+  box-shadow: 20px 20px 0 rgba(49, 80, 65, .1);
+  padding: 30px 42px 38px;
+}
+.onboarding-header { display: flex; align-items: center; justify-content: space-between; }
+.onboarding-header > span { color: var(--ledger-muted); font-size: 10px; font-weight: 800; letter-spacing: 1.5px; }
+.onboarding-progress { height: 4px; background: #e8e4d9; margin: 24px -42px 38px; }
+.onboarding-progress i { display: block; height: 100%; background: var(--ledger-sage); transition: width .25s ease; }
+.onboarding-stage > p,
+.onboarding-notification-step > p { color: var(--ledger-sage); font-size: 9px; font-weight: 900; letter-spacing: 1.8px; margin: 0 0 10px; }
+.onboarding-stage > h1,
+.onboarding-notification-step > h1 { font-family: var(--font-newsreader), serif; font-size: clamp(34px, 5vw, 52px); line-height: 1.02; font-weight: 480; margin: 0; }
+.onboarding-stage > small,
+.onboarding-notification-step > small { display: block; max-width: 640px; color: var(--ledger-muted); font-size: 12px; line-height: 1.65; margin: 13px 0 26px; }
+.onboarding-choice-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 9px; }
+.onboarding-choice-grid > button {
+  min-height: 145px; border: 1px solid var(--ledger-rule); background: #fbfaf5;
+  padding: 16px; text-align: left; display: flex; flex-direction: column; border-radius: 3px;
+}
+.onboarding-choice-grid > button:hover,
+.onboarding-choice-grid > button.selected { border-color: var(--ledger-sage); background: #edf3ed; }
+.onboarding-choice-grid span { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; background: #e8eee8; color: var(--ledger-sage); }
+.onboarding-choice-grid strong { margin-top: 22px; font-family: var(--font-newsreader), serif; font-size: 19px; }
+.onboarding-choice-grid small { color: var(--ledger-muted); font-size: 9px; line-height: 1.45; margin-top: 6px; }
+.onboarding-segmented { border: 0; padding: 0; margin: 28px 0 0; }
+.onboarding-segmented legend,
+.onboarding-radio-list legend,
+.prayer-reminder-setup legend { font-size: 9px; font-weight: 850; color: var(--ledger-muted); margin-bottom: 9px; }
+.onboarding-segmented button {
+  border: 1px solid var(--ledger-rule); background: white; min-height: 40px; padding: 0 20px;
+  text-transform: capitalize; color: var(--ledger-muted);
+}
+.onboarding-segmented button + button { border-left: 0; }
+.onboarding-segmented button.selected { background: var(--ledger-ink); color: white; }
+.onboarding-radio-list { display: grid; gap: 8px; border: 0; padding: 0; margin: 0; }
+.onboarding-radio-list > button {
+  display: flex; gap: 12px; align-items: center; text-align: left; padding: 14px;
+  background: #fbfaf5; border: 1px solid var(--ledger-rule);
+}
+.onboarding-radio-list > button.selected { border-color: var(--ledger-sage); background: #edf3ed; }
+.onboarding-radio-list > button > span { width: 23px; height: 23px; border: 1px solid var(--ledger-rule); border-radius: 50%; display: grid; place-items: center; color: white; }
+.onboarding-radio-list > button.selected > span { border-color: var(--ledger-sage); background: var(--ledger-sage); }
+.onboarding-radio-list div { display: grid; gap: 3px; }
+.onboarding-radio-list strong { font-size: 12px; }
+.onboarding-radio-list small { color: var(--ledger-muted); font-size: 9px; }
+.onboarding-time { display: block; margin-top: 22px; font-size: 10px; font-weight: 800; }
+.onboarding-time .ui-input { width: 180px; margin-top: 7px; }
+.onboarding-time small { display: block; color: var(--ledger-muted); font-weight: 500; margin-top: 6px; }
+.onboarding-location,
+.settings-location,
+.settings-push {
+  width: 100%; border: 1px solid var(--ledger-rule); background: #f8f8f2; padding: 14px;
+  display: flex; align-items: center; gap: 12px; text-align: left;
+}
+.onboarding-location > span,
+.onboarding-mark { width: 43px; height: 43px; display: grid; place-items: center; background: #e2ece4; color: var(--ledger-sage); border-radius: 50%; }
+.onboarding-location > div,
+.settings-location > span,
+.settings-push > span { display: grid; gap: 3px; }
+.onboarding-location small,
+.settings-location small,
+.settings-push small { color: var(--ledger-muted); font-size: 9px; }
+.onboarding-form-grid,
+.settings-form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 18px; }
+.onboarding-form-grid label,
+.settings-form-row label,
+.settings-grid article > label { display: grid; gap: 6px; color: var(--ledger-muted); font-size: 9px; font-weight: 800; }
+.onboarding-form-grid select,
+.settings-panel select,
+.prayer-reminder-setup select {
+  height: 40px; border: 1px solid var(--ledger-rule); background: white; padding: 0 10px; color: var(--ledger-ink);
+}
+.prayer-reminder-setup { border: 0; padding: 0; margin: 22px 0 0; }
+.prayer-reminder-setup > div { min-height: 44px; border-top: 1px solid var(--ledger-rule); display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.prayer-reminder-setup label { display: flex; align-items: center; gap: 8px; text-transform: capitalize; font-size: 10px; font-weight: 800; }
+.onboarding-template-list { display: grid; gap: 8px; }
+.onboarding-template-list button {
+  min-height: 74px; display: grid; grid-template-columns: 46px 1fr 30px; align-items: center;
+  gap: 12px; border: 1px solid var(--ledger-rule); background: #fbfaf5; padding: 10px 14px; text-align: left;
+}
+.onboarding-template-list button.selected { border-color: var(--ledger-sage); background: #edf3ed; }
+.onboarding-template-list button > span { font-size: 25px; }
+.onboarding-template-list button > div { display: grid; gap: 4px; }
+.onboarding-template-list button strong { font-family: var(--font-newsreader), serif; font-size: 18px; }
+.onboarding-template-list button small { color: var(--ledger-muted); font-size: 9px; }
+.onboarding-template-list button i { width: 25px; height: 25px; border: 1px solid var(--ledger-rule); border-radius: 50%; display: grid; place-items: center; color: white; font-style: normal; }
+.onboarding-template-list button.selected i { background: var(--ledger-sage); border-color: var(--ledger-sage); }
+.onboarding-actions { border-top: 1px solid var(--ledger-rule); margin-top: 30px; padding-top: 20px; display: flex; justify-content: space-between; }
+.onboarding-error { background: #f8e6e2; border: 1px solid #efd3cc; color: #8f4c44; padding: 11px 13px; font-size: 10px; margin-top: 14px; }
+.onboarding-loading { min-height: 160px; display: flex; align-items: center; justify-content: center; gap: 8px; color: var(--ledger-muted); }
+.onboarding-notification-step { text-align: center; max-width: 620px; }
+.onboarding-notification-step .onboarding-mark { margin: 0 auto 20px; }
+.onboarding-notification-step > small { margin-left: auto; margin-right: auto; }
+
+/* Prayer panel */
+.prayer-panel,
+.settings-panel { margin-top: 52px; border-top: 1px solid var(--ledger-rule); padding-top: 34px; scroll-margin-top: 90px; }
+.prayer-panel .honest-section-title > span { display: flex; gap: 6px; align-items: center; color: var(--ledger-sage); font-weight: 800; }
+.prayer-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+.prayer-grid article { border: 1px solid var(--ledger-rule); background: #fbfaf5; padding: 14px 10px; min-width: 0; }
+.prayer-grid article.next { border-color: var(--ledger-sage); box-shadow: inset 0 3px var(--ledger-sage); background: #edf3ed; }
+.prayer-grid article header { display: flex; gap: 8px; align-items: center; }
+.prayer-grid article header > span { color: var(--ledger-sage); }
+.prayer-grid article header > div { display: grid; }
+.prayer-grid article strong { font-family: var(--font-newsreader), serif; font-size: 17px; }
+.prayer-grid article time { font-size: 10px; color: var(--ledger-muted); margin-top: 2px; }
+.prayer-statuses { display: grid; gap: 4px; margin-top: 13px; }
+.prayer-statuses button { border: 1px solid var(--ledger-rule); background: white; min-height: 27px; font-size: 7px; text-transform: uppercase; display: flex; align-items: center; justify-content: center; gap: 3px; }
+.prayer-statuses button.selected { background: var(--ledger-ink); border-color: var(--ledger-ink); color: white; }
+.prayer-method-note { display: block; color: var(--ledger-muted); margin-top: 10px; font-size: 8px; }
+.prayer-loading,
+.prayer-error { min-height: 120px; display: flex; align-items: center; justify-content: center; gap: 8px; color: var(--ledger-muted); }
+.prayer-error button { border: 0; background: transparent; display: flex; align-items: center; gap: 4px; font-weight: 800; }
+
+/* Preferences and reminders */
+.settings-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.settings-grid > article { border: 1px solid var(--ledger-rule); background: #fbfaf5; padding: 18px; }
+.settings-grid > article.settings-wide { grid-column: 1 / -1; }
+.settings-grid h3 { font-family: var(--font-newsreader), serif; font-size: 20px; font-weight: 500; margin: 0 0 15px; }
+.settings-chip-list { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 15px; }
+.settings-chip-list button { min-height: 30px; border: 1px solid var(--ledger-rule); background: white; padding: 0 10px; font-size: 8px; display: flex; gap: 4px; align-items: center; }
+.settings-chip-list button.selected { border-color: var(--ledger-sage); background: #e5eee7; }
+.settings-toggle { display: flex !important; grid-template-columns: auto 1fr; align-items: center; }
+.settings-grid article > .ui-input { max-width: 180px; margin-top: 10px; }
+.settings-push { margin-top: 13px; }
+.settings-location { margin-top: 13px; }
+.settings-prayers { margin-top: 14px; display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+.settings-prayers > div { border: 1px solid var(--ledger-rule); background: white; padding: 9px; display: grid; gap: 7px; }
+.settings-prayers label { display: flex; align-items: center; gap: 5px; text-transform: capitalize; font-size: 8px; font-weight: 800; }
+.settings-prayers select { min-width: 0; width: 100%; font-size: 8px; }
+.settings-help { color: var(--ledger-muted); font-size: 9px; }
+.habit-reminder-list { display: grid; gap: 6px; }
+.habit-reminder-list > div { display: grid; grid-template-columns: 34px 1fr 130px 82px; gap: 9px; align-items: center; border-top: 1px solid var(--ledger-rule); padding-top: 7px; }
+.habit-reminder-list > div > span { font-size: 20px; }
+.habit-reminder-list > div > strong { font-size: 10px; }
+.settings-save { display: flex; justify-content: flex-end; margin-top: 14px; }
+
+@media (max-width: 900px) {
+  .onboarding-choice-grid { grid-template-columns: repeat(2, 1fr); }
+  .prayer-grid { grid-template-columns: repeat(2, 1fr); }
+  .settings-prayers { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 620px) {
+  .onboarding-shell { padding: 0; display: block; }
+  .onboarding-card { min-height: 100vh; padding: 24px 18px; box-shadow: none; border: 0; }
+  .onboarding-progress { margin-left: -18px; margin-right: -18px; }
+  .onboarding-choice-grid,
+  .onboarding-form-grid,
+  .settings-grid,
+  .settings-form-row { grid-template-columns: 1fr; }
+  .onboarding-choice-grid > button { min-height: 105px; }
+  .onboarding-choice-grid strong { margin-top: 12px; }
+  .prayer-grid,
+  .settings-prayers { grid-template-columns: 1fr; }
+  .settings-grid > article.settings-wide { grid-column: auto; }
+  .habit-reminder-list > div { grid-template-columns: 32px 1fr; }
+  .habit-reminder-list .ui-input,
+  .habit-reminder-list .ui-button { grid-column: 2; }
+}

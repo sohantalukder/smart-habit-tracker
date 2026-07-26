@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import "./globals.css";
 import "./bloom.css";
 import { Toaster } from "@/components/ui/sonner";
+import { ServiceWorkerRegistration } from "@/components/service-worker-registration";
 
 const newsreader = Newsreader({
   subsets: ["latin"],
@@ -47,6 +48,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
     <html lang="en">
       <body className={`${newsreader.variable} ${manrope.variable}`}>
         {children}
+        <ServiceWorkerRegistration />
         <Toaster />
       </body>
     </html>
