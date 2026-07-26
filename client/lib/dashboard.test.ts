@@ -52,6 +52,9 @@ describe("dashboard presentation", () => {
       email: "amina@example.com",
       name: " ",
       timezone: "Asia/Dhaka",
+      units: "metric",
+      account_created_at: "2026-07-26T00:00:00.000Z",
+      has_avatar: false,
     } satisfies Profile;
     expect(profileDisplayName(profile)).toBe("amina");
   });

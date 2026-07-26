@@ -13,6 +13,7 @@ export default async function LoginPage({
     returnTo?: string;
     mode?: string;
     verification?: string;
+    emailChange?: string;
   }>;
 }) {
   const params = await searchParams;
@@ -30,6 +31,7 @@ export default async function LoginPage({
       returnTo={returnTo}
       initialMode={authMode(params.mode)}
       verificationFailed={params.verification === "invalid"}
+      emailChangeFailed={params.emailChange === "invalid"}
     />
   );
 }

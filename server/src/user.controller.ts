@@ -27,43 +27,6 @@ import { DatabaseService } from "./platform/database.service";
 export class UserController {
   constructor(private readonly database: DatabaseService) {}
 
-  @Get("profile")
-  async profile(@Req() request: AuthenticatedRequest) {
-    const result = await this.database.query(
-      `select p.*, u.email,
-              coalesce(
-                (
-                  select json_agg(
-                    json_build_object(
-                      'prayer_name', r.prayer_name,
-                      'enabled', r.enabled,
-                      'offset_minutes', r.offset_minutes
-                    )
-                    order by case r.prayer_name
-                      when 'fajr' then 1 when 'dhuhr' then 2 when 'asr' then 3
-                      when 'maghrib' then 4 else 5
-                    end
-                  )
-                  from prayer_reminder_settings r
-                  where r.user_id = p.id
-                ),
-                '[]'::json
-              ) as prayer_reminders,
-              exists (
-                select 1 from firebase_installations f
-                where f.user_id = p.id
-                  and f.active = true
-                  and f.last_seen_at >= now() - interval '30 days'
-              ) as push_enabled
-       from profiles p
-       join users u on u.id = p.id
-       where p.id = $1`,
-      [request.user.id],
-    );
-    if (!result.rows[0]) throw new BadRequestException("Profile not found.");
-    return result.rows[0];
-  }
-
   @Get("habit-templates")
   async templates() {
     const result = await this.database.query(

@@ -31,7 +31,7 @@ async function proxy(request: Request, context: Context) {
     "x-correlation-id":
       request.headers.get("x-correlation-id") ?? crypto.randomUUID(),
   });
-  for (const name of ["content-type", "idempotency-key"]) {
+  for (const name of ["content-type", "idempotency-key", "if-none-match"]) {
     const value = request.headers.get(name);
     if (value) headers.set(name, value);
   }
@@ -45,7 +45,13 @@ async function proxy(request: Request, context: Context) {
       : await request.arrayBuffer(),
   });
   const responseHeaders = new Headers();
-  for (const name of ["content-type", "x-correlation-id"]) {
+  for (const name of [
+    "content-type",
+    "content-disposition",
+    "cache-control",
+    "etag",
+    "x-correlation-id",
+  ]) {
     const value = upstream.headers.get(name);
     if (value) responseHeaders.set(name, value);
   }

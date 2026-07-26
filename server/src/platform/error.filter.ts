@@ -53,6 +53,7 @@ export class ErrorFilter implements ExceptionFilter {
           ? objectBody.retryable
           : status >= 500 || status === 429,
       ...(objectBody?.fieldErrors ? { fieldErrors: objectBody.fieldErrors } : {}),
+      ...(objectBody?.details ? { details: objectBody.details } : {}),
     });
   }
 }

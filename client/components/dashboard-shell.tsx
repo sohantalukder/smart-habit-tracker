@@ -13,6 +13,7 @@ import {
   Menu,
   Settings,
   Sprout,
+  UserRound,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -29,6 +30,7 @@ import { apiRequest } from "@/lib/api";
 import type { ExperienceProfile, NotificationDelivery } from "@/lib/api/types";
 import { profileDisplayName } from "@/lib/dashboard";
 import { unregisterPushNotifications } from "@/lib/firebase-messaging";
+import { ProfileAvatar } from "./profile-avatar";
 
 type DashboardContextValue = {
   profile: ExperienceProfile;
@@ -97,6 +99,7 @@ export function DashboardShell({
       ? [{ href: "/dashboard/prayers", label: "Prayers", icon: Bell }]
       : []),
     { href: "/dashboard/inbox", label: "Inbox", icon: Archive, count: notifications.length },
+    { href: "/dashboard/profile", label: "Profile", icon: UserRound },
     { href: "/dashboard/settings", label: "Settings", icon: Settings },
   ], [notifications.length, profile.religion_preference]);
 
@@ -115,13 +118,16 @@ export function DashboardShell({
             <span><Sprout size={21} /></span><strong>Bloom</strong>
           </Link>
           <div className="app-account">
-            <Link href="/dashboard/inbox" aria-label={`${notifications.length} inbox items`}>
+            <Link className="account-notifications" href="/dashboard/inbox" aria-label={`${notifications.length} inbox items`}>
               <Bell size={18} /><span>{notifications.length}</span>
             </Link>
-            <div>
-              <strong>{profileDisplayName(profile)}</strong>
-              <small>{profile.email}</small>
-            </div>
+            <Link className="account-identity" href="/dashboard/profile" aria-label="Open your profile">
+              <ProfileAvatar profile={profile} size="small" />
+              <span>
+                <strong>{profileDisplayName(profile)}</strong>
+                <small>{profile.email}</small>
+              </span>
+            </Link>
             <button
               type="button"
               className="mobile-menu-button"

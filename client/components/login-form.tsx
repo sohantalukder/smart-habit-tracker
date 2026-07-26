@@ -12,24 +12,34 @@ export function LoginForm({
   returnTo,
   initialMode,
   verificationFailed,
+  emailChangeFailed,
 }: {
   returnTo: string;
   initialMode: AuthMode;
   verificationFailed: boolean;
+  emailChangeFailed: boolean;
 }) {
   const [mode, setMode] = useState<AuthMode>(initialMode);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState(
-    verificationFailed ? "This verification link is invalid or has expired." : "",
+    verificationFailed || emailChangeFailed
+      ? "This verification link is invalid or has expired."
+      : "",
   );
   const [confirmationSent, setConfirmationSent] = useState(false);
   const [unverifiedEmail, setUnverifiedEmail] = useState("");
+  const [pendingRestore, setPendingRestore] = useState<{
+    email: string;
+    password: string;
+    purgeAt?: string;
+  } | null>(null);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setMessage("");
     setConfirmationSent(false);
     setUnverifiedEmail("");
+    setPendingRestore(null);
 
     const data = new FormData(event.currentTarget);
     const email = String(data.get("email")).trim();
@@ -57,6 +67,15 @@ export function LoginForm({
     if (!response.ok) {
       setMessage(result?.message ?? "The request could not be completed.");
       if (result?.code === "EMAIL_NOT_VERIFIED") setUnverifiedEmail(email);
+      if (result?.code === "ACCOUNT_DELETION_PENDING") {
+        setPendingRestore({
+          email,
+          password,
+          purgeAt: typeof result?.details?.purgeAt === "string"
+            ? result.details.purgeAt
+            : undefined,
+        });
+      }
       return;
     }
     if (mode === "signin") {
@@ -66,6 +85,26 @@ export function LoginForm({
     setConfirmationSent(true);
     setUnverifiedEmail(email);
     setMessage("Check your inbox and verify your email to enter your private space.");
+  }
+
+  async function restoreAccount() {
+    if (!pendingRestore || loading) return;
+    setLoading(true);
+    const response = await fetch("/api/auth/restore-account", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        email: pendingRestore.email,
+        password: pendingRestore.password,
+      }),
+    }).catch(() => null);
+    setLoading(false);
+    const result = await response?.json().catch(() => null);
+    if (!response?.ok) {
+      setMessage(result?.message ?? "The account could not be restored.");
+      return;
+    }
+    window.location.assign(returnTo);
   }
 
   async function resendVerification() {
@@ -91,6 +130,7 @@ export function LoginForm({
     setMessage("");
     setConfirmationSent(false);
     setUnverifiedEmail("");
+    setPendingRestore(null);
     window.history.replaceState(
       null,
       "",
@@ -147,6 +187,24 @@ export function LoginForm({
             >
               Resend verification email
             </Button>
+          )}
+          {pendingRestore && (
+            <div className="account-restore">
+              <strong>Deletion can still be cancelled</strong>
+              <span>
+                {pendingRestore.purgeAt
+                  ? `Your data is scheduled to be permanently removed on ${new Date(pendingRestore.purgeAt).toLocaleDateString()}.`
+                  : "Your account is still inside its recovery window."}
+              </span>
+              <Button
+                type="button"
+                variant="secondary"
+                disabled={loading}
+                onClick={() => void restoreAccount()}
+              >
+                Restore my account
+              </Button>
+            </div>
           )}
           <footer>
             {mode === "signin" ? "New to Bloom?" : "Already registered?"}

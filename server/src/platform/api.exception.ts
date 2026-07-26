@@ -7,7 +7,8 @@ export class ApiException extends HttpException {
     message: string,
     retryable = false,
     fieldErrors?: Record<string, string[]>,
+    details?: Record<string, unknown>,
   ) {
-    super({ code, message, retryable, fieldErrors }, status);
+    super({ code, message, retryable, fieldErrors, details }, status);
   }
 }

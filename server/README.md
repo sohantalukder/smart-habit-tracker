@@ -33,7 +33,10 @@ notifications remain available.
    client.
 4. Create a least-privilege service account that can send FCM messages.
 5. Base64-encode the complete service-account JSON and store it only as the
-   worker secret `FIREBASE_SERVICE_ACCOUNT_JSON_BASE64`.
+   API and worker secrets `FIREBASE_SERVICE_ACCOUNT_JSON_BASE64` and
+   `FIREBASE_STORAGE_BUCKET`. The service account needs Firebase Messaging
+   access and permission to read, write, and delete objects in the avatar
+   bucket.
 
 Never expose the service-account JSON through a `NEXT_PUBLIC_*` variable. Bloom
 uses Firebase Installation IDs and automatically deactivates unregistered,

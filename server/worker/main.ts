@@ -3,13 +3,14 @@ import {
   cert,
   getApps,
   initializeApp,
+  type App,
   type ServiceAccount,
 } from "firebase-admin/app";
 import {
   getMessaging,
   type Message,
-  type Messaging,
 } from "firebase-admin/messaging";
+import { getStorage } from "firebase-admin/storage";
 import { Pool } from "pg";
 import { Resend } from "resend";
 import {
@@ -20,6 +21,7 @@ import {
   isInvalidFirebaseRegistrationError,
   summarizeFirebaseResponses,
 } from "../src/reminders/firebase-delivery.js";
+import { purgeDeletedAccounts } from "../src/accounts/purge-deleted-accounts.js";
 
 const database = new Pool({
   connectionString: required("DATABASE_URL"),
@@ -30,7 +32,12 @@ const database = new Pool({
       : undefined,
 });
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
-const firebaseMessaging = initializeFirebaseMessaging();
+const firebaseApp = initializeFirebaseAdmin();
+const firebaseMessaging = firebaseApp ? getMessaging(firebaseApp) : null;
+const avatarBucket =
+  firebaseApp && process.env.FIREBASE_STORAGE_BUCKET
+    ? getStorage(firebaseApp).bucket(process.env.FIREBASE_STORAGE_BUCKET)
+    : null;
 const connection = {
   url:
     process.env.NODE_ENV === "production"
@@ -81,6 +88,10 @@ const worker = new Worker(
       for (const delivery of deliveries) {
         await enqueueDelivery(delivery.id, delivery.scheduled_at);
       }
+      return;
+    }
+    if (job.name === "accounts.purge") {
+      await purgeDeletedAccounts(database, avatarBucket);
     }
   },
   { connection, concurrency: 20 },
@@ -100,6 +111,11 @@ async function configureSchedulers() {
     "nightly-reminder-materialization",
     { pattern: "0 2 * * *" },
     { name: "reminders.materialize", data: {} },
+  );
+  await queue.upsertJobScheduler(
+    "nightly-account-purge",
+    { pattern: "30 3 * * *" },
+    { name: "accounts.purge", data: {} },
   );
   await queue.add(
     "reminders.materialize",
@@ -365,15 +381,14 @@ async function pruneInstallations() {
   );
 }
 
-function initializeFirebaseMessaging(): Messaging | null {
+function initializeFirebaseAdmin(): App | null {
   const encoded = process.env.FIREBASE_SERVICE_ACCOUNT_JSON_BASE64;
   if (!encoded) return null;
   try {
     const account = JSON.parse(
       Buffer.from(encoded, "base64").toString("utf8"),
     ) as ServiceAccount;
-    const app = getApps()[0] ?? initializeApp({ credential: cert(account) });
-    return getMessaging(app);
+    return getApps()[0] ?? initializeApp({ credential: cert(account) });
   } catch {
     console.error(JSON.stringify({
       event: "firebase.configuration_invalid",

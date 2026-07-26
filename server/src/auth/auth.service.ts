@@ -2,7 +2,13 @@ import { Injectable } from "@nestjs/common";
 import type { DatabaseClient } from "../platform/database.service";
 import { DatabaseService } from "../platform/database.service";
 import { ApiException } from "../platform/api.exception";
-import type { LoginInput, SignupInput } from "../contracts";
+import type {
+  DeleteAccountInput,
+  EmailChangeRequestInput,
+  LoginInput,
+  PasswordChangeInput,
+  SignupInput,
+} from "../contracts";
 import { hashPassword, verifyPassword } from "./password";
 import { createSecretToken, hashSecretToken } from "./token";
 import { VerificationEmailService } from "./verification-email.service";
@@ -18,6 +24,7 @@ type UserAuthRow = {
   name: string;
   suspended_at: Date | null;
   deleted_at: Date | null;
+  deletion_purge_at: Date | null;
 };
 
 export type AuthenticatedUser = {
@@ -174,7 +181,7 @@ export class AuthService {
     const normalizedEmail = normalizeEmail(input.email);
     const result = await this.database.query<UserAuthRow>(
       `select u.id, u.email, u.password_hash, u.email_verified_at,
-              p.name, p.suspended_at, p.deleted_at
+              p.name, p.suspended_at, p.deleted_at, p.deletion_purge_at
        from users u
        join profiles p on p.id = u.id
        where u.email = $1`,
@@ -198,6 +205,20 @@ export class AuthService {
         "Verify your email before signing in.",
       );
     }
+    if (
+      user.deleted_at &&
+      user.deletion_purge_at &&
+      user.deletion_purge_at.getTime() > Date.now()
+    ) {
+      throw new ApiException(
+        403,
+        "ACCOUNT_DELETION_PENDING",
+        "This account is scheduled for deletion. Restore it to continue.",
+        false,
+        undefined,
+        { purgeAt: user.deletion_purge_at.toISOString() },
+      );
+    }
     if (user.suspended_at || user.deleted_at) {
       throw new ApiException(
         403,
@@ -206,6 +227,359 @@ export class AuthService {
       );
     }
     return this.database.transaction((client) => this.createSession(client, user.id));
+  }
+
+  async restoreAccount(input: LoginInput): Promise<SessionResult> {
+    const normalizedEmail = normalizeEmail(input.email);
+    const result = await this.database.query<UserAuthRow>(
+      `select u.id, u.email, u.password_hash, u.email_verified_at,
+              p.name, p.suspended_at, p.deleted_at, p.deletion_purge_at
+       from users u
+       join profiles p on p.id = u.id
+       where u.email = $1`,
+      [normalizedEmail],
+    );
+    const user = result.rows[0];
+    const passwordMatches = user
+      ? await verifyPassword(input.password, user.password_hash)
+      : Boolean(await hashPassword(input.password)) && false;
+    if (
+      !user ||
+      !passwordMatches ||
+      !user.email_verified_at ||
+      user.suspended_at ||
+      !user.deleted_at ||
+      !user.deletion_purge_at ||
+      user.deletion_purge_at.getTime() <= Date.now()
+    ) {
+      throw new ApiException(
+        401,
+        "ACCOUNT_NOT_RESTORABLE",
+        "The account could not be restored with these credentials.",
+      );
+    }
+
+    const session = await this.database.transaction(async (client) => {
+      const restored = await client.query(
+        `update profiles
+         set deleted_at = null,
+             deletion_purge_at = null,
+             updated_at = now()
+         where id = $1
+           and deleted_at is not null
+           and deletion_purge_at > now()
+         returning id`,
+        [user.id],
+      );
+      if (!restored.rows[0]) {
+        throw new ApiException(
+          409,
+          "ACCOUNT_NOT_RESTORABLE",
+          "The account recovery window has ended.",
+        );
+      }
+      return this.createSession(client, user.id);
+    });
+    await this.email.sendSecurityNotice(
+      user.email,
+      "Your Bloom account was restored",
+      "Your Bloom account deletion was cancelled and access has been restored. Push notifications remain disabled until you enable them again.",
+    );
+    return session;
+  }
+
+  async changePassword(
+    userId: string,
+    currentSessionId: string,
+    input: PasswordChangeInput,
+  ) {
+    const result = await this.database.query<{
+      email: string;
+      password_hash: string;
+    }>(
+      "select email, password_hash from users where id = $1",
+      [userId],
+    );
+    const user = result.rows[0];
+    if (!user || !(await verifyPassword(input.currentPassword, user.password_hash))) {
+      throw new ApiException(
+        401,
+        "CURRENT_PASSWORD_INCORRECT",
+        "The current password is incorrect.",
+      );
+    }
+    if (await verifyPassword(input.newPassword, user.password_hash)) {
+      throw new ApiException(
+        400,
+        "PASSWORD_REUSED",
+        "Choose a password you have not just used.",
+        false,
+        { newPassword: ["Choose a password you have not just used."] },
+      );
+    }
+    const passwordHash = await hashPassword(input.newPassword);
+    await this.database.transaction(async (client) => {
+      await client.query(
+        "update users set password_hash = $2, updated_at = now() where id = $1",
+        [userId, passwordHash],
+      );
+      await client.query(
+        `update user_sessions
+         set revoked_at = now()
+         where user_id = $1 and id <> $2 and revoked_at is null`,
+        [userId, currentSessionId],
+      );
+    });
+    await this.email.sendSecurityNotice(
+      user.email,
+      "Your Bloom password was changed",
+      "Your Bloom password was changed and other signed-in devices were disconnected. If this was not you, contact support immediately.",
+    );
+    return { changed: true as const };
+  }
+
+  async requestEmailChange(userId: string, input: EmailChangeRequestInput) {
+    const normalizedEmail = normalizeEmail(input.newEmail);
+    const result = await this.database.query<{
+      email: string;
+      password_hash: string;
+    }>(
+      "select email, password_hash from users where id = $1",
+      [userId],
+    );
+    const user = result.rows[0];
+    if (!user || !(await verifyPassword(input.currentPassword, user.password_hash))) {
+      throw new ApiException(
+        401,
+        "CURRENT_PASSWORD_INCORRECT",
+        "The current password is incorrect.",
+      );
+    }
+    if (normalizedEmail === user.email) {
+      throw new ApiException(
+        400,
+        "EMAIL_UNCHANGED",
+        "Enter a different email address.",
+        false,
+        { newEmail: ["Enter a different email address."] },
+      );
+    }
+
+    const token = createSecretToken();
+    try {
+      await this.database.transaction(async (client) => {
+        const existing = await client.query(
+          "select 1 from users where email = $1 and id <> $2",
+          [normalizedEmail, userId],
+        );
+        if (existing.rows[0]) {
+          throw new ApiException(
+            409,
+            "EMAIL_ALREADY_IN_USE",
+            "That email address is already in use.",
+            false,
+            { newEmail: ["That email address is already in use."] },
+          );
+        }
+        await client.query(
+          `update email_change_tokens
+           set consumed_at = now()
+           where user_id = $1 and consumed_at is null`,
+          [userId],
+        );
+        await client.query(
+          `insert into email_change_tokens (
+             user_id, pending_email, token_hash, expires_at
+           )
+           values ($1, $2, $3, $4)`,
+          [
+            userId,
+            normalizedEmail,
+            hashSecretToken(token),
+            new Date(Date.now() + VERIFICATION_LIFETIME_MS),
+          ],
+        );
+      });
+      await this.email.sendEmailChangeVerification(normalizedEmail, token);
+    } catch (error) {
+      if (error instanceof ApiException) throw error;
+      if (isUniqueViolation(error)) {
+        throw new ApiException(
+          409,
+          "EMAIL_ALREADY_IN_USE",
+          "That email address is already in use.",
+          false,
+          { newEmail: ["That email address is already in use."] },
+        );
+      }
+      throw error;
+    }
+    await this.email.sendSecurityNotice(
+      user.email,
+      "A Bloom email change was requested",
+      `A request was made to change your Bloom sign-in email to ${normalizedEmail}. Your current email remains active until the new address is verified.`,
+    );
+    return {
+      verificationRequired: true as const,
+      pendingEmail: normalizedEmail,
+    };
+  }
+
+  async verifyEmailChange(token: string): Promise<SessionResult> {
+    const result = await this.database.transaction(async (client) => {
+      const tokenResult = await client.query<{
+        id: string;
+        user_id: string;
+        pending_email: string;
+        expires_at: Date;
+        consumed_at: Date | null;
+        current_email: string;
+      }>(
+        `select t.id, t.user_id, t.pending_email, t.expires_at, t.consumed_at,
+                u.email as current_email
+         from email_change_tokens t
+         join users u on u.id = t.user_id
+         join profiles p on p.id = t.user_id
+         where t.token_hash = $1
+           and p.deleted_at is null
+           and p.suspended_at is null
+         for update`,
+        [hashSecretToken(token)],
+      );
+      const verification = tokenResult.rows[0];
+      if (
+        !verification ||
+        verification.consumed_at ||
+        verification.expires_at.getTime() <= Date.now()
+      ) {
+        throw new ApiException(
+          400,
+          "INVALID_VERIFICATION_TOKEN",
+          "This verification link is invalid or has expired.",
+        );
+      }
+      const existing = await client.query(
+        "select 1 from users where email = $1 and id <> $2",
+        [verification.pending_email, verification.user_id],
+      );
+      if (existing.rows[0]) {
+        throw new ApiException(
+          409,
+          "EMAIL_ALREADY_IN_USE",
+          "That email address is already in use.",
+        );
+      }
+      await client.query(
+        `update users
+         set email = $2, email_verified_at = now(), updated_at = now()
+         where id = $1`,
+        [verification.user_id, verification.pending_email],
+      );
+      await client.query(
+        `update email_change_tokens
+         set consumed_at = now()
+         where user_id = $1 and consumed_at is null`,
+        [verification.user_id],
+      );
+      await client.query(
+        `update user_sessions
+         set revoked_at = now()
+         where user_id = $1 and revoked_at is null`,
+        [verification.user_id],
+      );
+      const session = await this.createSession(client, verification.user_id);
+      return {
+        session,
+        oldEmail: verification.current_email,
+        newEmail: verification.pending_email,
+      };
+    }).catch((error) => {
+      if (isUniqueViolation(error)) {
+        throw new ApiException(
+          409,
+          "EMAIL_ALREADY_IN_USE",
+          "That email address is already in use.",
+        );
+      }
+      throw error;
+    });
+    await Promise.all([
+      this.email.sendSecurityNotice(
+        result.oldEmail,
+        "Your Bloom email was changed",
+        `Your Bloom sign-in email was changed to ${result.newEmail}. If this was not you, contact support immediately.`,
+      ),
+      this.email.sendSecurityNotice(
+        result.newEmail,
+        "Your new Bloom email is active",
+        "This address is now the sign-in email for your Bloom account.",
+      ),
+    ]);
+    return result.session;
+  }
+
+  async signOutOtherSessions(userId: string, currentSessionId: string) {
+    const result = await this.database.query(
+      `update user_sessions
+       set revoked_at = now()
+       where user_id = $1 and id <> $2 and revoked_at is null`,
+      [userId, currentSessionId],
+    );
+    return { signedOut: result.rowCount ?? 0 };
+  }
+
+  async deleteAccount(userId: string, input: DeleteAccountInput) {
+    const result = await this.database.query<{
+      email: string;
+      password_hash: string;
+    }>(
+      "select email, password_hash from users where id = $1",
+      [userId],
+    );
+    const user = result.rows[0];
+    if (!user || !(await verifyPassword(input.currentPassword, user.password_hash))) {
+      throw new ApiException(
+        401,
+        "CURRENT_PASSWORD_INCORRECT",
+        "The current password is incorrect.",
+      );
+    }
+    const purgeAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+    await this.database.transaction(async (client) => {
+      await client.query(
+        `update profiles
+         set deleted_at = now(),
+             deletion_purge_at = $2,
+             updated_at = now()
+         where id = $1`,
+        [userId, purgeAt],
+      );
+      await client.query(
+        `update user_sessions
+         set revoked_at = now()
+         where user_id = $1 and revoked_at is null`,
+        [userId],
+      );
+      await client.query(
+        `update firebase_installations
+         set active = false, updated_at = now()
+         where user_id = $1 and active = true`,
+        [userId],
+      );
+      await client.query(
+        `update notification_deliveries
+         set state = 'cancelled',
+             error_message = 'Account deletion requested.'
+         where user_id = $1 and state in ('scheduled', 'failed')`,
+        [userId],
+      );
+    });
+    await this.email.sendSecurityNotice(
+      user.email,
+      "Your Bloom account is scheduled for deletion",
+      `Your Bloom account is disabled and will be permanently deleted on ${purgeAt.toISOString()}. Sign in before then to restore it.`,
+    );
+    return { deletionScheduled: true as const, purgeAt: purgeAt.toISOString() };
   }
 
   async authenticate(accessToken: string) {
@@ -279,4 +653,13 @@ export class AuthService {
 
 export function normalizeEmail(email: string) {
   return email.trim().toLowerCase();
+}
+
+function isUniqueViolation(error: unknown) {
+  return Boolean(
+    error &&
+    typeof error === "object" &&
+    "code" in error &&
+    error.code === "23505",
+  );
 }

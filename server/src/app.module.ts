@@ -14,12 +14,15 @@ import { AuthRateLimitService } from "./auth/auth-rate-limit.service";
 import { VerificationEmailService } from "./auth/verification-email.service";
 import { ExperienceController } from "./experience.controller";
 import { PrayerTimeService } from "./prayer/prayer-time.service";
+import { ProfileController } from "./profile/profile.controller";
+import { AvatarStorageService } from "./profile/avatar-storage.service";
 
 @Module({
   controllers: [
     HealthController,
     OpenApiController,
     AuthController,
+    ProfileController,
     UserController,
     ExperienceController,
     AdminController,
@@ -32,6 +35,7 @@ import { PrayerTimeService } from "./prayer/prayer-time.service";
     AuthRateLimitService,
     VerificationEmailService,
     PrayerTimeService,
+    AvatarStorageService,
     { provide: APP_GUARD, useClass: AuthGuard },
   ],
 })

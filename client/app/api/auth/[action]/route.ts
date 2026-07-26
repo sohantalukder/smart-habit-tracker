@@ -13,7 +13,20 @@ type SessionResponse = {
   expiresAt: string;
 };
 
-const publicActions = new Set(["signup", "login", "resend-verification"]);
+const publicActions = new Set([
+  "signup",
+  "login",
+  "resend-verification",
+  "restore-account",
+]);
+const privateActions = new Set([
+  "change-password",
+  "request-email-change",
+  "sign-out-others",
+  "delete-account",
+  "logout",
+]);
+const sessionActions = new Set(["login", "restore-account"]);
 
 export async function POST(
   request: Request,
@@ -27,15 +40,22 @@ export async function POST(
   }
 
   const { action } = await context.params;
-  if (!publicActions.has(action) && action !== "logout") {
+  if (!publicActions.has(action) && !privateActions.has(action)) {
     return NextResponse.json(
       { code: "NOT_FOUND", message: "The requested auth action does not exist." },
       { status: 404 },
     );
   }
 
-  const body = action === "logout" ? undefined : await request.text();
-  const token = action === "logout" ? await getSessionToken() : null;
+  const hasBody = !["logout", "sign-out-others"].includes(action);
+  const body = hasBody ? await request.text() : undefined;
+  const token = privateActions.has(action) ? await getSessionToken() : null;
+  if (privateActions.has(action) && !token) {
+    return NextResponse.json(
+      { code: "AUTH_REQUIRED", message: "Please sign in to continue." },
+      { status: 401 },
+    );
+  }
   const upstream = await serverApiRequest(`/auth/${action}`, {
     method: "POST",
     body,
@@ -46,7 +66,7 @@ export async function POST(
     message: "The account service returned an invalid response.",
   }));
 
-  if (upstream.ok && action === "login") {
+  if (upstream.ok && sessionActions.has(action)) {
     const session = payload as SessionResponse;
     const response = NextResponse.json(
       {
@@ -66,7 +86,7 @@ export async function POST(
 
   const response = NextResponse.json(payload, { status: upstream.status });
   response.headers.set("cache-control", "private, no-store, max-age=0");
-  if (action === "logout") {
+  if (action === "logout" || (action === "delete-account" && upstream.ok)) {
     response.cookies.set(SESSION_COOKIE, "", expiredSessionCookie());
   }
   return response;

@@ -15,6 +15,29 @@ export const emailSchema = z.object({
 export const verificationSchema = z.object({
   token: z.string().min(32).max(200),
 });
+export const profileUpdateSchema = z.object({
+  name: z.string().trim().min(2).max(80),
+  timezone: z.string().trim().min(1).max(100).refine(
+    isSupportedTimeZone,
+    "Select a valid timezone.",
+  ),
+  units: z.enum(["metric", "imperial"]),
+});
+export const passwordChangeSchema = z.object({
+  currentPassword: z.string().min(1).max(128),
+  newPassword: z.string().min(8).max(128),
+}).refine(
+  (value) => value.currentPassword !== value.newPassword,
+  { path: ["newPassword"], message: "Choose a password you have not just used." },
+);
+export const emailChangeRequestSchema = z.object({
+  currentPassword: z.string().min(1).max(128),
+  newEmail: z.email().max(254),
+});
+export const deleteAccountSchema = z.object({
+  currentPassword: z.string().min(1).max(128),
+  confirmation: z.literal("DELETE"),
+});
 export const adminRoleSchema = z.enum(["support", "moderator", "super_admin"]);
 export const supportSessionSchema = z.object({
   userId: z.uuid(),
@@ -170,6 +193,10 @@ export const errorEnvelopeSchema = z.object({
 export type SupportSession = z.infer<typeof supportSessionSchema>;
 export type SignupInput = z.infer<typeof signupSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
+export type ProfileUpdateInput = z.infer<typeof profileUpdateSchema>;
+export type PasswordChangeInput = z.infer<typeof passwordChangeSchema>;
+export type EmailChangeRequestInput = z.infer<typeof emailChangeRequestSchema>;
+export type DeleteAccountInput = z.infer<typeof deleteAccountSchema>;
 export type CreateHabitInput = z.infer<typeof createHabitSchema>;
 export type CheckInInput = z.infer<typeof checkInSchema>;
 export type JournalInput = z.infer<typeof journalSchema>;
@@ -203,5 +230,14 @@ function validatePrayerSetup(
       path: ["prayerSetup"],
       message: "Prayer preferences are available only when religion is Muslim.",
     });
+  }
+}
+
+function isSupportedTimeZone(timezone: string) {
+  try {
+    new Intl.DateTimeFormat("en", { timeZone: timezone }).format();
+    return true;
+  } catch {
+    return false;
   }
 }
