@@ -5,6 +5,8 @@ import {
   BarChart3,
   Bell,
   BookCheck,
+  Github,
+  Globe2,
   Leaf,
   LoaderCircle,
   LogOut,
@@ -162,8 +164,30 @@ export function DashboardShell({
             </nav>
             <div className="privacy-note">
               <ShieldCheck size={21} />
-              <strong>Private by design</strong>
-              <p>Only your authenticated account can see your journal and tracking history.</p>
+              <strong className="privacy-note__title">Private by design</strong>
+              <p className="privacy-note__copy">Only your authenticated account can see your journal and tracking history.</p>
+              <div className="developer-credit">
+                <p>DEVELOPED BY</p>
+                <strong>Md. Sohan Talukder</strong>
+                <div>
+                  <a
+                    href="https://github.com/sohantalukder"
+                    target="_blank"
+                    rel="noreferrer"
+                    aria-label="Md. Sohan Talukder on GitHub"
+                  >
+                    <Github /> GitHub
+                  </a>
+                  <a
+                    href="https://sohantalukder.github.io"
+                    target="_blank"
+                    rel="noreferrer"
+                    aria-label="Md. Sohan Talukder's website"
+                  >
+                    <Globe2 /> Website
+                  </a>
+                </div>
+              </div>
             </div>
           </aside>
           <div className="app-content">{children}</div>

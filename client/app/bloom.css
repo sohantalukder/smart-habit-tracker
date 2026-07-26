@@ -1713,19 +1713,55 @@ textarea {
 }
 
 .privacy-note svg { color: var(--ledger-forest); }
-.privacy-note strong {
+.privacy-note__title {
   display: block;
   margin-top: 12px;
   font-family: var(--font-display);
   font-size: 18px;
   font-weight: 600;
 }
-.privacy-note p {
+.privacy-note__copy {
   margin: 5px 0 0;
   color: var(--ledger-muted);
   font-size: 12px;
   line-height: 1.55;
 }
+.developer-credit {
+  padding-top: 16px;
+  margin-top: 17px;
+  border-top: 1px solid var(--ledger-rule);
+}
+.developer-credit > p {
+  margin: 0 0 5px;
+  color: var(--ledger-muted);
+  font-size: 9px;
+  font-weight: 850;
+  letter-spacing: 0.14em;
+}
+.developer-credit > strong {
+  display: block;
+  font-size: 12px;
+  font-weight: 800;
+}
+.developer-credit > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 10px;
+}
+.developer-credit a {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--ledger-forest);
+  font-size: 11px;
+  font-weight: 800;
+  text-decoration: underline;
+  text-decoration-color: rgba(21, 56, 47, 0.35);
+  text-underline-offset: 3px;
+}
+.developer-credit a:hover { text-decoration-color: currentColor; }
+.developer-credit a svg { width: 14px; height: 14px; }
 
 .app-content {
   width: 100%;

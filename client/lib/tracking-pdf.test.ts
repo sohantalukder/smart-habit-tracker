@@ -39,6 +39,15 @@ describe("branded tracking PDF", () => {
   it("creates a multi-page PDF with Bloom document metadata", () => {
     const document = createTrackingPdf(report);
     expect(document.getNumberOfPages()).toBeGreaterThan(1);
+    const pageStreams = (
+      document.internal as unknown as { pages: Array<string[] | undefined> }
+    ).pages.slice(1);
+    expect(pageStreams).toHaveLength(document.getNumberOfPages());
+    for (const page of pageStreams) {
+      const stream = page?.join("\n") ?? "";
+      expect(stream).toContain("(Bloom)");
+      expect(stream).toContain("(Bloom - Private by design)");
+    }
     const source = document.output();
     expect(source).toContain("/Author (Bloom)");
     expect(source).toContain("/Creator (Bloom)");
