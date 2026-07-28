@@ -15,8 +15,11 @@ import {
   LoaderCircle,
   LogOut,
   Menu,
+  PanelLeftClose,
+  PanelLeftOpen,
   Settings,
   UserRound,
+  X,
 } from "lucide-react";
 import { BloomMark } from "@/components/bloom-mark";
 import Link from "next/link";
@@ -31,7 +34,11 @@ import {
   type ReactNode,
 } from "react";
 import type { ExperienceProfile, NotificationDelivery } from "@/lib/api/types";
-import { profileDisplayName } from "@/lib/dashboard";
+import {
+  parseSidebarCollapsedPreference,
+  profileDisplayName,
+  sidebarCollapsedStorageKey,
+} from "@/lib/dashboard";
 import { unregisterPushNotifications } from "@/lib/firebase-messaging";
 import { appQueries, queryKeys } from "@/lib/queries";
 import { ProfileAvatar } from "./profile-avatar";
@@ -60,6 +67,8 @@ export function DashboardShell({
   const notifications = notificationsQuery.data ?? [];
   const [signingOut, setSigningOut] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [sidebarPreferenceLoaded, setSidebarPreferenceLoaded] = useState(false);
 
   const refreshProfile = useCallback(async () => {
     await queryClient.refetchQueries({
@@ -90,6 +99,18 @@ export function DashboardShell({
   }, [pathname]);
 
   useEffect(() => {
+    try {
+      setSidebarCollapsed(parseSidebarCollapsedPreference(
+        window.localStorage.getItem(sidebarCollapsedStorageKey),
+      ));
+    } catch {
+      setSidebarCollapsed(false);
+    } finally {
+      setSidebarPreferenceLoaded(true);
+    }
+  }, []);
+
+  useEffect(() => {
     if (!mobileNavOpen) return;
     const closeOnEscape = (event: KeyboardEvent) => {
       if (event.key === "Escape") setMobileNavOpen(false);
@@ -104,6 +125,16 @@ export function DashboardShell({
     await fetch("/api/auth/logout", { method: "POST" }).catch(() => null);
     queryClient.clear();
     window.location.assign("/");
+  }
+
+  function toggleSidebar() {
+    const next = !sidebarCollapsed;
+    setSidebarCollapsed(next);
+    try {
+      window.localStorage.setItem(sidebarCollapsedStorageKey, String(next));
+    } catch {
+      // The layout still works when browser storage is unavailable.
+    }
   }
 
   const items = useMemo(() => [
@@ -151,11 +182,11 @@ export function DashboardShell({
             <button
               type="button"
               className="mobile-menu-button"
-              aria-label="Open navigation"
+              aria-label={mobileNavOpen ? "Close navigation" : "Open navigation"}
               aria-expanded={mobileNavOpen}
               onClick={() => setMobileNavOpen((current) => !current)}
             >
-              <Menu size={20} />
+              {mobileNavOpen ? <X size={20} /> : <Menu size={20} />}
             </button>
             <button type="button" className="signout-button" onClick={() => void signOut()} disabled={signingOut}>
               {signingOut ? <LoaderCircle className="spin" /> : <LogOut />}
@@ -164,7 +195,11 @@ export function DashboardShell({
           </div>
         </header>
 
-        <div className="app-layout">
+        <div className={[
+          "app-layout",
+          sidebarCollapsed ? "is-sidebar-collapsed" : "",
+          sidebarPreferenceLoaded ? "is-sidebar-ready" : "",
+        ].filter(Boolean).join(" ")}>
           {mobileNavOpen && (
             <button
               type="button"
@@ -174,12 +209,34 @@ export function DashboardShell({
             />
           )}
           <aside className={mobileNavOpen ? "app-sidebar is-open" : "app-sidebar"}>
-            <p>YOUR PRIVATE SPACE</p>
-            <nav aria-label="Account sections">
+            <div className="app-sidebar-heading">
+              <p>YOUR PRIVATE SPACE</p>
+              <button
+                type="button"
+                className="sidebar-collapse-button"
+                aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+                aria-expanded={!sidebarCollapsed}
+                aria-controls="dashboard-navigation"
+                title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+                onClick={toggleSidebar}
+              >
+                {sidebarCollapsed
+                  ? <PanelLeftOpen aria-hidden="true" />
+                  : <PanelLeftClose aria-hidden="true" />}
+              </button>
+            </div>
+            <nav id="dashboard-navigation" aria-label="Account sections">
               {items.map(({ href, label, icon: Icon, exact, count }) => {
                 const active = exact ? pathname === href : pathname.startsWith(href);
                 return (
-                  <Link href={href} className={active ? "active" : ""} aria-current={active ? "page" : undefined} key={href}>
+                  <Link
+                    href={href}
+                    className={active ? "active" : ""}
+                    aria-current={active ? "page" : undefined}
+                    aria-label={sidebarCollapsed ? label : undefined}
+                    data-label={label}
+                    key={href}
+                  >
                     <Icon size={19} />
                     <span>{label}</span>
                     {count !== undefined && <small>{count}</small>}

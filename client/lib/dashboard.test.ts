@@ -4,7 +4,9 @@ import {
   habitProgress,
   habitProgressLabel,
   localDateString,
+  parseSidebarCollapsedPreference,
   profileDisplayName,
+  sidebarCollapsedStorageKey,
 } from "./dashboard";
 
 const habit = {
@@ -57,5 +59,16 @@ describe("dashboard presentation", () => {
       has_avatar: false,
     } satisfies Profile;
     expect(profileDisplayName(profile)).toBe("amina");
+  });
+
+  it("keeps the sidebar expanded when no preference exists", () => {
+    expect(parseSidebarCollapsedPreference(null)).toBe(false);
+    expect(sidebarCollapsedStorageKey).toBe("bloom.sidebar.collapsed");
+  });
+
+  it("accepts only the stored collapsed value", () => {
+    expect(parseSidebarCollapsedPreference("true")).toBe(true);
+    expect(parseSidebarCollapsedPreference("false")).toBe(false);
+    expect(parseSidebarCollapsedPreference("collapsed")).toBe(false);
   });
 });
