@@ -8,13 +8,27 @@ import {
   Bell,
   BellOff,
   Check,
+  CircleAlert,
+  Clock3,
   Crosshair,
   LoaderCircle,
   MapPin,
+  MoonStar,
+  RotateCcw,
   Save,
-  Settings2,
+  SlidersHorizontal,
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import {
+  usePathname,
+  useRouter,
+  useSearchParams,
+} from "next/navigation";
+import {
+  useMemo,
+  useRef,
+  useState,
+  type KeyboardEvent,
+} from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -33,6 +47,14 @@ import {
   unregisterPushNotifications,
 } from "@/lib/firebase-messaging";
 import { queryKeys } from "@/lib/queries";
+import {
+  composePreferencesPayload,
+  habitReminderRequest,
+  parseSettingsSection,
+  settingsSections,
+  type PreferencesPayload,
+  type SettingsSection,
+} from "@/lib/settings";
 
 const allGoals: GoalPreference[] = [
   "movement",
@@ -56,6 +78,32 @@ const methods = [
   ["tehran", "Tehran"],
   ["north_america", "North America"],
 ] as const;
+const sectionTabs = [
+  {
+    id: "preferences",
+    label: "Preferences",
+    description: "Goals and pace",
+    icon: SlidersHorizontal,
+  },
+  {
+    id: "notifications",
+    label: "Notifications",
+    description: "Digest, push, and reminders",
+    icon: Bell,
+  },
+  {
+    id: "prayer",
+    label: "Prayer",
+    description: "Religion and prayer setup",
+    icon: MoonStar,
+  },
+] as const;
+
+type ReminderSaveState = {
+  state: "saving" | "saved" | "error";
+  attemptedTime: string;
+  message?: string;
+};
 
 export function SettingsPanel({
   profile,
@@ -65,33 +113,43 @@ export function SettingsPanel({
   habits: HabitWithReminder[];
 }) {
   const queryClient = useQueryClient();
-  const [goals, setGoals] = useState<GoalPreference[]>(
-    profile.goal_preferences?.length
-      ? profile.goal_preferences
-      : ["movement"],
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const activeSection = parseSettingsSection(searchParams.get("section"));
+  const initialPreferences = useMemo(
+    () => preferencesFromProfile(profile),
+    [profile],
   );
-  const [pace, setPace] = useState(profile.starting_pace ?? "balanced");
+  const [confirmedPreferences, setConfirmedPreferences] =
+    useState<PreferencesPayload>(initialPreferences);
+  const [goals, setGoals] = useState<GoalPreference[]>(
+    initialPreferences.goals,
+  );
+  const [pace, setPace] = useState(initialPreferences.pace);
   const [religion, setReligion] = useState<ReligionPreference>(
-    profile.religion_preference ?? "unspecified",
+    initialPreferences.religion,
   );
   const [digestTime, setDigestTime] = useState(
-    String(profile.daily_digest_time ?? "20:00").slice(0, 5),
+    initialPreferences.dailyDigestTime,
   );
   const [digestEnabled, setDigestEnabled] = useState(
-    profile.daily_digest_enabled ?? true,
+    initialPreferences.dailyDigestEnabled,
   );
   const [location, setLocation] = useState(() => (
-    profile.latitude != null && profile.longitude != null
+    initialPreferences.prayerSetup
       ? {
-          latitude: Number(profile.latitude),
-          longitude: Number(profile.longitude),
-          timezone: profile.timezone,
+          latitude: initialPreferences.prayerSetup.latitude,
+          longitude: initialPreferences.prayerSetup.longitude,
+          timezone: initialPreferences.prayerSetup.timezone,
         }
       : null
   ));
-  const [madhab, setMadhab] = useState<Madhab>(profile.madhab ?? "hanafi");
+  const [madhab, setMadhab] = useState<Madhab>(
+    initialPreferences.prayerSetup?.madhab ?? "hanafi",
+  );
   const [method, setMethod] = useState<string>(
-    profile.prayer_calculation_method ?? "karachi",
+    initialPreferences.prayerSetup?.calculationMethod ?? "karachi",
   );
   const [prayerReminders, setPrayerReminders] = useState<PrayerReminderSetting[]>(
     prayerNames.map((prayer) => profile.prayer_reminders?.find(
@@ -110,6 +168,9 @@ export function SettingsPanel({
       habits.map((habit) => [habit.id, habit.reminder_time?.slice(0, 5) ?? ""]),
     ),
   );
+  const [reminderStates, setReminderStates] =
+    useState<Record<string, ReminderSaveState>>({});
+  const pendingHabitIds = useRef(new Set<string>());
 
   const locationLabel = useMemo(
     () => location
@@ -117,44 +178,117 @@ export function SettingsPanel({
       : "Location is required for prayer times",
     [location],
   );
+
   const preferencesMutation = useMutation({
-    mutationFn: (payload: Record<string, unknown>) =>
-      apiRequest("/preferences", {
-        method: "PUT",
-        body: JSON.stringify(payload),
-      }),
-    onSuccess: async () => {
+    mutationFn: ({
+      payload,
+    }: {
+      section: SettingsSection;
+      payload: PreferencesPayload;
+    }) => apiRequest("/preferences", {
+      method: "PUT",
+      body: JSON.stringify(payload),
+    }),
+    onSuccess: async (_result, { section, payload }) => {
+      setConfirmedPreferences(payload);
+      if (section === "prayer" && payload.prayerSetup === null) {
+        setLocation(null);
+      }
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: queryKeys.user.profile }),
         queryClient.invalidateQueries({ queryKey: queryKeys.user.habits }),
         queryClient.invalidateQueries({ queryKey: queryKeys.user.prayerRoot }),
       ]);
-      toast.success("Preferences and future reminders were updated.");
+      toast.success(`${sectionTitle(section)} settings were updated.`);
     },
     onError: (reason) => {
       toast.error(reason instanceof Error ? reason.message : "Preferences could not be saved.");
     },
   });
+
   const reminderMutation = useMutation({
-    mutationFn: ({ habit, time }: {
+    mutationFn: ({
+      habit,
+      time,
+    }: {
       habit: HabitWithReminder;
       time: string;
     }) => apiRequest(`/habits/${habit.id}/reminder`, {
       method: "PUT",
-      body: JSON.stringify(time
-        ? { enabled: true, time }
-        : { enabled: false, time: null }),
+      body: JSON.stringify(habitReminderRequest(time)),
     }),
-    onSuccess: async (_result, { habit, time }) => {
-      await queryClient.invalidateQueries({
-        queryKey: queryKeys.user.habits,
-      });
-      toast.success(time ? `${habit.name} reminder saved.` : `${habit.name} reminder removed.`);
-    },
-    onError: (reason) => {
-      toast.error(reason instanceof Error ? reason.message : "Habit reminder could not be saved.");
-    },
   });
+
+  function currentDraft(): PreferencesPayload {
+    return {
+      goals,
+      pace,
+      religion,
+      dailyDigestTime: digestTime,
+      dailyDigestEnabled: digestEnabled,
+      prayerSetup: religion === "muslim" && location
+        ? {
+            ...location,
+            madhab,
+            calculationMethod: method,
+            reminders: prayerReminders.map((setting) => ({
+              prayer: setting.prayer_name,
+              enabled: setting.enabled,
+              offsetMinutes: setting.offset_minutes,
+            })),
+          }
+        : null,
+    };
+  }
+
+  function saveSection(section: SettingsSection) {
+    if (section === "preferences" && !goals.length) {
+      toast.error("Choose at least one goal.");
+      return;
+    }
+    if (section === "prayer" && religion === "muslim" && !location) {
+      toast.error("Location is required for prayer times.");
+      return;
+    }
+    preferencesMutation.mutate({
+      section,
+      payload: composePreferencesPayload(
+        section,
+        currentDraft(),
+        confirmedPreferences,
+      ),
+    });
+  }
+
+  function selectSection(section: SettingsSection) {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("section", section);
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+  }
+
+  function handleTabKeyDown(
+    event: KeyboardEvent<HTMLButtonElement>,
+    section: SettingsSection,
+  ) {
+    if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) {
+      return;
+    }
+    event.preventDefault();
+    const currentIndex = settingsSections.indexOf(section);
+    const nextIndex = event.key === "Home"
+      ? 0
+      : event.key === "End"
+        ? settingsSections.length - 1
+        : event.key === "ArrowRight"
+          ? (currentIndex + 1) % settingsSections.length
+          : (currentIndex - 1 + settingsSections.length) % settingsSections.length;
+    const nextSection = settingsSections[nextIndex]!;
+    const tabs = event.currentTarget.parentElement?.querySelectorAll<HTMLButtonElement>(
+      '[role="tab"]',
+    );
+    tabs?.[nextIndex]?.focus();
+    selectSection(nextSection);
+  }
 
   function refreshLocation() {
     if (!navigator.geolocation) {
@@ -180,36 +314,6 @@ export function SettingsPanel({
     );
   }
 
-  function savePreferences() {
-    if (!goals.length) {
-      toast.error("Choose at least one goal.");
-      return;
-    }
-    if (religion === "muslim" && !location) {
-      toast.error("Location is required for prayer times.");
-      return;
-    }
-    preferencesMutation.mutate({
-      goals,
-      pace,
-      religion,
-      dailyDigestTime: digestTime,
-      dailyDigestEnabled: digestEnabled,
-      prayerSetup: religion === "muslim" && location
-        ? {
-            ...location,
-            madhab,
-            calculationMethod: method,
-            reminders: prayerReminders.map((setting) => ({
-              prayer: setting.prayer_name,
-              enabled: setting.enabled,
-              offsetMinutes: setting.offset_minutes,
-            })),
-          }
-        : null,
-    });
-  }
-
   async function togglePush() {
     setPushSaving(true);
     if (pushState === "enabled") {
@@ -225,182 +329,466 @@ export function SettingsPanel({
     setPushSaving(false);
   }
 
-  function saveHabitReminder(habit: HabitWithReminder) {
-    const time = habitTimes[habit.id] ?? "";
-    if (!reminderMutation.isPending) {
-      reminderMutation.mutate({ habit, time });
+  async function persistHabitReminder(
+    habit: HabitWithReminder,
+    time: string,
+  ) {
+    if (pendingHabitIds.current.has(habit.id)) return;
+    pendingHabitIds.current.add(habit.id);
+    setReminderStates((current) => ({
+      ...current,
+      [habit.id]: { state: "saving", attemptedTime: time },
+    }));
+    try {
+      await reminderMutation.mutateAsync({ habit, time });
+      setReminderStates((current) => ({
+        ...current,
+        [habit.id]: { state: "saved", attemptedTime: time },
+      }));
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.user.habits,
+      });
+    } catch (reason) {
+      setReminderStates((current) => ({
+        ...current,
+        [habit.id]: {
+          state: "error",
+          attemptedTime: time,
+          message: reason instanceof Error ? reason.message : "Reminder could not be saved.",
+        },
+      }));
+    } finally {
+      pendingHabitIds.current.delete(habit.id);
     }
   }
 
   return (
-    <section className="settings-panel" id="settings" aria-labelledby="settings-title">
-      <div className="honest-section-title">
-        <div><p>PREFERENCES</p><h2 id="settings-title">Settings</h2></div>
-        <Settings2 size={20} />
-      </div>
-
-      <div className="settings-grid">
-        <article>
-          <h3>Goals and pace</h3>
-          <div className="settings-chip-list">
-            {allGoals.map((goal) => (
-              <button
-                type="button"
-                className={goals.includes(goal) ? "selected" : ""}
-                onClick={() => setGoals((current) =>
-                  current.includes(goal)
-                    ? current.filter((item) => item !== goal)
-                    : [...current, goal]
-                )}
-                key={goal}
-              >
-                {goals.includes(goal) && <Check size={12} />} {titleCase(goal)}
-              </button>
-            ))}
-          </div>
-          <label>Starting pace
-            <select value={pace} onChange={(event) => setPace(event.target.value as typeof pace)}>
-              <option value="light">Light</option>
-              <option value="balanced">Balanced</option>
-              <option value="ambitious">Ambitious</option>
-            </select>
-          </label>
-        </article>
-
-        <article>
-          <h3>Digest and push</h3>
-          <label className="settings-toggle">
-            <input type="checkbox" checked={digestEnabled} onChange={(event) => setDigestEnabled(event.target.checked)} />
-            Daily incomplete-habits digest
-          </label>
-          <Input type="time" disabled={!digestEnabled} value={digestTime} onChange={(event) => setDigestTime(event.target.value)} />
-          <button type="button" className="settings-push" disabled={pushSaving} onClick={() => void togglePush()}>
-            {pushState === "enabled" ? <BellOff /> : <Bell />}
-            <span>
-              <strong>{pushState === "enabled" ? "Disable push on this browser" : "Enable Firebase push"}</strong>
-              <small>Current state: {pushState}</small>
-            </span>
-          </button>
-        </article>
-
-        <article className="settings-wide">
-          <h3>Religion and prayer</h3>
-          <label>Religion preference
-            <select
-              value={religion}
-              onChange={(event) => {
-                const next = event.target.value as ReligionPreference;
-                setReligion(next);
-                if (next !== "muslim") setLocation(null);
-              }}
+    <section className="settings-panel" id="settings" aria-label="Settings">
+      <div className="settings-tabs" role="tablist" aria-label="Settings categories">
+        {sectionTabs.map(({ id, label, description, icon: Icon }) => {
+          const selected = activeSection === id;
+          return (
+            <button
+              type="button"
+              id={`${id}-tab`}
+              role="tab"
+              aria-selected={selected}
+              aria-controls={`${id}-panel`}
+              tabIndex={selected ? 0 : -1}
+              className={selected ? "active" : ""}
+              onClick={() => selectSection(id)}
+              onKeyDown={(event) => handleTabKeyDown(event, id)}
+              key={id}
             >
-              <option value="muslim">Muslim</option>
-              <option value="other">Other</option>
-              <option value="unspecified">Prefer not to say</option>
-            </select>
-          </label>
-          {religion === "muslim" && (
-            <>
-              <button type="button" className="settings-location" disabled={locating} onClick={refreshLocation}>
-                {locating ? <LoaderCircle className="spin" /> : location ? <Crosshair /> : <MapPin />}
-                <span><strong>{location ? "Refresh prayer location" : "Set prayer location"}</strong><small>{locationLabel}</small></span>
-              </button>
-              <div className="settings-form-row">
-                <label>Mazhab
-                  <select value={madhab} onChange={(event) => setMadhab(event.target.value as Madhab)}>
-                    <option value="hanafi">Hanafi</option>
-                    <option value="shafi">Shafi</option>
-                    <option value="maliki">Maliki</option>
-                    <option value="hanbali">Hanbali</option>
-                  </select>
-                </label>
-                <label>Calculation method
-                  <select value={method} onChange={(event) => setMethod(event.target.value)}>
-                    {methods.map(([value, label]) => <option value={value} key={value}>{label}</option>)}
-                  </select>
-                </label>
-              </div>
-              <div className="settings-prayers">
-                {prayerReminders.map((setting, index) => (
-                  <div key={setting.prayer_name}>
-                    <label>
-                      <input
-                        type="checkbox"
-                        checked={setting.enabled}
-                        onChange={(event) => setPrayerReminders((current) =>
-                          current.map((item, itemIndex) =>
-                            itemIndex === index ? { ...item, enabled: event.target.checked } : item
-                          )
-                        )}
-                      />
-                      {titleCase(setting.prayer_name)}
-                    </label>
-                    <select
-                      disabled={!setting.enabled}
-                      value={setting.offset_minutes}
-                      onChange={(event) => setPrayerReminders((current) =>
-                        current.map((item, itemIndex) =>
-                          itemIndex === index
-                            ? { ...item, offset_minutes: Number(event.target.value) }
-                            : item
-                        )
-                      )}
-                    >
-                      <option value={0}>At prayer time</option>
-                      <option value={5}>5 min before</option>
-                      <option value={10}>10 min before</option>
-                      <option value={15}>15 min before</option>
-                      <option value={30}>30 min before</option>
-                    </select>
-                  </div>
-                ))}
-              </div>
-            </>
-          )}
-        </article>
-
-        <article className="settings-wide">
-          <h3>Per-habit reminders</h3>
-          <p className="settings-help">Leave a time empty to disable that habit’s separate reminder.</p>
-          <div className="habit-reminder-list">
-            {habits.map((habit) => (
-              <div key={habit.id}>
-                <span>{habit.icon}</span>
-                <strong>{habit.name}</strong>
-                <Input
-                  type="time"
-                  value={habitTimes[habit.id] ?? ""}
-                  onChange={(event) => setHabitTimes((current) => ({
-                    ...current,
-                    [habit.id]: event.target.value,
-                  }))}
-                />
-                <Button
-                  variant="secondary"
-                  disabled={reminderMutation.isPending
-                    && reminderMutation.variables?.habit.id === habit.id}
-                  onClick={() => saveHabitReminder(habit)}
-                >
-                  {reminderMutation.isPending
-                    && reminderMutation.variables?.habit.id === habit.id
-                    ? <LoaderCircle className="spin" />
-                    : <Save />}
-                  Save
-                </Button>
-              </div>
-            ))}
-          </div>
-        </article>
+              <Icon aria-hidden="true" />
+              <span>{label}<small>{description}</small></span>
+            </button>
+          );
+        })}
       </div>
 
-      <footer className="settings-save">
-        <Button disabled={preferencesMutation.isPending} onClick={savePreferences}>
-          {preferencesMutation.isPending ? <LoaderCircle className="spin" /> : <Save />}
-          Save preferences
-        </Button>
-      </footer>
+      {activeSection === "preferences" && (
+        <div
+          className="settings-section-card"
+          id="preferences-panel"
+          role="tabpanel"
+          aria-labelledby="preferences-tab"
+        >
+          <header className="settings-section-heading">
+            <div>
+              <p>Personalize your plan</p>
+              <h2>Preferences</h2>
+              <span>Choose the areas you want to improve and a pace that feels sustainable.</span>
+            </div>
+            <SlidersHorizontal aria-hidden="true" />
+          </header>
+
+          <div className="settings-section-body">
+            <fieldset className="settings-goals">
+              <legend>Focus areas</legend>
+              <p>Select one or more goals. You can change these whenever your priorities shift.</p>
+              <div className="settings-chip-list">
+                {allGoals.map((goal) => {
+                  const selected = goals.includes(goal);
+                  return (
+                    <button
+                      type="button"
+                      aria-pressed={selected}
+                      className={selected ? "selected" : ""}
+                      onClick={() => setGoals((current) =>
+                        selected
+                          ? current.filter((item) => item !== goal)
+                          : [...current, goal]
+                      )}
+                      key={goal}
+                    >
+                      {selected && <Check aria-hidden="true" />} {titleCase(goal)}
+                    </button>
+                  );
+                })}
+              </div>
+            </fieldset>
+
+            <label className="settings-field">
+              <span>Starting pace</span>
+              <small>Controls how ambitious your recommended routine feels.</small>
+              <select
+                value={pace}
+                onChange={(event) => setPace(event.target.value as typeof pace)}
+              >
+                <option value="light">Light</option>
+                <option value="balanced">Balanced</option>
+                <option value="ambitious">Ambitious</option>
+              </select>
+            </label>
+          </div>
+
+          <footer className="settings-section-actions">
+            <Button
+              disabled={preferencesMutation.isPending}
+              onClick={() => saveSection("preferences")}
+            >
+              {preferencesMutation.isPending
+                && preferencesMutation.variables?.section === "preferences"
+                ? <LoaderCircle className="spin" />
+                : <Save />}
+              Save changes
+            </Button>
+          </footer>
+        </div>
+      )}
+
+      {activeSection === "notifications" && (
+        <div
+          className="settings-section-card"
+          id="notifications-panel"
+          role="tabpanel"
+          aria-labelledby="notifications-tab"
+        >
+          <header className="settings-section-heading">
+            <div>
+              <p>Stay gently accountable</p>
+              <h2>Notifications</h2>
+              <span>Control your daily digest, browser notifications, and habit reminder times.</span>
+            </div>
+            <Bell aria-hidden="true" />
+          </header>
+
+          <div className="settings-section-body">
+            <div className="settings-notification-cards">
+              <article className="settings-subcard">
+                <div className="settings-subcard-heading">
+                  <span><Clock3 aria-hidden="true" /></span>
+                  <div><h3>Daily digest</h3><p>A summary of habits still waiting for you.</p></div>
+                </div>
+                <label className="settings-toggle">
+                  <input
+                    type="checkbox"
+                    checked={digestEnabled}
+                    onChange={(event) => setDigestEnabled(event.target.checked)}
+                  />
+                  <span>Send my incomplete-habits digest</span>
+                </label>
+                <label className="settings-field settings-digest-time">
+                  <span>Delivery time</span>
+                  <Input
+                    type="time"
+                    disabled={!digestEnabled}
+                    value={digestTime}
+                    onChange={(event) => setDigestTime(event.target.value)}
+                  />
+                </label>
+              </article>
+
+              <article className="settings-subcard">
+                <div className="settings-subcard-heading">
+                  <span><Bell aria-hidden="true" /></span>
+                  <div><h3>Browser push</h3><p>Receive reminders on this browser when Bloom is closed.</p></div>
+                </div>
+                <button
+                  type="button"
+                  className="settings-push"
+                  disabled={pushSaving}
+                  onClick={() => void togglePush()}
+                >
+                  {pushState === "enabled" ? <BellOff aria-hidden="true" /> : <Bell aria-hidden="true" />}
+                  <span>
+                    <strong>{pushState === "enabled" ? "Disable browser push" : "Enable browser push"}</strong>
+                    <small>Current state: {pushState}</small>
+                  </span>
+                </button>
+              </article>
+            </div>
+
+            <div className="habit-reminder-section">
+              <header>
+                <div>
+                  <h3>Habit reminders</h3>
+                  <p>Choose a time for each habit. Changes save automatically; clear a time to turn it off.</p>
+                </div>
+                <span><Check aria-hidden="true" /> Autosave on</span>
+              </header>
+              <div className="habit-reminder-list">
+                {habits.map((habit) => {
+                  const saveState = reminderStates[habit.id];
+                  const time = habitTimes[habit.id] ?? "";
+                  return (
+                    <div className="habit-reminder-row" key={habit.id}>
+                      <div className="habit-reminder-identity">
+                        <span aria-hidden="true">{habit.icon}</span>
+                        <div>
+                          <strong>{habit.name}</strong>
+                          <small>{time ? "Daily reminder" : "No reminder set"}</small>
+                        </div>
+                      </div>
+                      <div className="habit-reminder-action">
+                        <label className="habit-reminder-control">
+                          <span className="sr-only">Reminder time for {habit.name}</span>
+                          <Input
+                            type="time"
+                            aria-label={`Reminder time for ${habit.name}`}
+                            disabled={saveState?.state === "saving"}
+                            value={time}
+                            onChange={(event) => {
+                              const nextTime = event.target.value;
+                              setHabitTimes((current) => ({
+                                ...current,
+                                [habit.id]: nextTime,
+                              }));
+                              void persistHabitReminder(habit, nextTime);
+                            }}
+                          />
+                        </label>
+                        <div
+                          className={`habit-reminder-status is-${saveState?.state ?? "idle"}`}
+                          aria-live="polite"
+                        >
+                          {saveState?.state === "saving" && (
+                            <span><LoaderCircle className="spin" aria-hidden="true" /> Saving…</span>
+                          )}
+                          {saveState?.state === "saved" && (
+                            <span><Check aria-hidden="true" /> Saved</span>
+                          )}
+                          {saveState?.state === "error" && (
+                            <button
+                              type="button"
+                              title={saveState.message}
+                              onClick={() => void persistHabitReminder(
+                                habit,
+                                saveState.attemptedTime,
+                              )}
+                            >
+                              <CircleAlert aria-hidden="true" /> Couldn’t save · Retry
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+
+          <footer className="settings-section-actions">
+            <span>Habit reminder times save separately and automatically.</span>
+            <Button
+              disabled={preferencesMutation.isPending}
+              onClick={() => saveSection("notifications")}
+            >
+              {preferencesMutation.isPending
+                && preferencesMutation.variables?.section === "notifications"
+                ? <LoaderCircle className="spin" />
+                : <Save />}
+              Save changes
+            </Button>
+          </footer>
+        </div>
+      )}
+
+      {activeSection === "prayer" && (
+        <div
+          className="settings-section-card"
+          id="prayer-panel"
+          role="tabpanel"
+          aria-labelledby="prayer-tab"
+        >
+          <header className="settings-section-heading">
+            <div>
+              <p>Keep faith in your routine</p>
+              <h2>Prayer</h2>
+              <span>Set your religion preference and personalize prayer calculation and reminders.</span>
+            </div>
+            <MoonStar aria-hidden="true" />
+          </header>
+
+          <div className="settings-section-body">
+            <label className="settings-field settings-religion">
+              <span>Religion preference</span>
+              <small>Prayer features are shown only when Muslim is selected.</small>
+              <select
+                value={religion}
+                onChange={(event) => setReligion(event.target.value as ReligionPreference)}
+              >
+                <option value="muslim">Muslim</option>
+                <option value="other">Other</option>
+                <option value="unspecified">Prefer not to say</option>
+              </select>
+            </label>
+
+            {religion === "muslim" ? (
+              <div className="settings-prayer-setup">
+                <button
+                  type="button"
+                  className="settings-location"
+                  disabled={locating}
+                  onClick={refreshLocation}
+                >
+                  {locating
+                    ? <LoaderCircle className="spin" aria-hidden="true" />
+                    : location
+                      ? <Crosshair aria-hidden="true" />
+                      : <MapPin aria-hidden="true" />}
+                  <span>
+                    <strong>{location ? "Refresh prayer location" : "Set prayer location"}</strong>
+                    <small>{locationLabel}</small>
+                  </span>
+                </button>
+
+                <div className="settings-form-row">
+                  <label className="settings-field">
+                    <span>Mazhab</span>
+                    <select
+                      value={madhab}
+                      onChange={(event) => setMadhab(event.target.value as Madhab)}
+                    >
+                      <option value="hanafi">Hanafi</option>
+                      <option value="shafi">Shafi</option>
+                      <option value="maliki">Maliki</option>
+                      <option value="hanbali">Hanbali</option>
+                    </select>
+                  </label>
+                  <label className="settings-field">
+                    <span>Calculation method</span>
+                    <select value={method} onChange={(event) => setMethod(event.target.value)}>
+                      {methods.map(([value, label]) => (
+                        <option value={value} key={value}>{label}</option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
+
+                <fieldset className="settings-prayers">
+                  <legend>Prayer reminders</legend>
+                  <p>Choose whether and when each prayer reminder should arrive.</p>
+                  <div>
+                    {prayerReminders.map((setting, index) => (
+                      <div className="settings-prayer-row" key={setting.prayer_name}>
+                        <label>
+                          <input
+                            type="checkbox"
+                            checked={setting.enabled}
+                            onChange={(event) => setPrayerReminders((current) =>
+                              current.map((item, itemIndex) =>
+                                itemIndex === index
+                                  ? { ...item, enabled: event.target.checked }
+                                  : item
+                              )
+                            )}
+                          />
+                          <span>{titleCase(setting.prayer_name)}</span>
+                        </label>
+                        <select
+                          aria-label={`${titleCase(setting.prayer_name)} reminder time`}
+                          disabled={!setting.enabled}
+                          value={setting.offset_minutes}
+                          onChange={(event) => setPrayerReminders((current) =>
+                            current.map((item, itemIndex) =>
+                              itemIndex === index
+                                ? { ...item, offset_minutes: Number(event.target.value) }
+                                : item
+                            )
+                          )}
+                        >
+                          <option value={0}>At prayer time</option>
+                          <option value={5}>5 min before</option>
+                          <option value={10}>10 min before</option>
+                          <option value={15}>15 min before</option>
+                          <option value={30}>30 min before</option>
+                        </select>
+                      </div>
+                    ))}
+                  </div>
+                </fieldset>
+              </div>
+            ) : (
+              <div className="settings-prayer-empty">
+                <MoonStar aria-hidden="true" />
+                <div>
+                  <h3>Prayer settings are hidden</h3>
+                  <p>Select Muslim above if you would like Bloom to calculate prayer times and send prayer reminders.</p>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <footer className="settings-section-actions">
+            <Button
+              disabled={preferencesMutation.isPending}
+              onClick={() => saveSection("prayer")}
+            >
+              {preferencesMutation.isPending
+                && preferencesMutation.variables?.section === "prayer"
+                ? <LoaderCircle className="spin" />
+                : <Save />}
+              Save changes
+            </Button>
+          </footer>
+        </div>
+      )}
     </section>
   );
+}
+
+function preferencesFromProfile(profile: ExperienceProfile): PreferencesPayload {
+  const religion = profile.religion_preference ?? "unspecified";
+  const hasLocation = profile.latitude != null && profile.longitude != null;
+  return {
+    goals: profile.goal_preferences?.length
+      ? profile.goal_preferences
+      : ["movement"],
+    pace: profile.starting_pace ?? "balanced",
+    religion,
+    dailyDigestTime: String(profile.daily_digest_time ?? "20:00").slice(0, 5),
+    dailyDigestEnabled: profile.daily_digest_enabled ?? true,
+    prayerSetup: religion === "muslim" && hasLocation
+      ? {
+          latitude: Number(profile.latitude),
+          longitude: Number(profile.longitude),
+          timezone: profile.timezone,
+          madhab: profile.madhab ?? "hanafi",
+          calculationMethod: profile.prayer_calculation_method ?? "karachi",
+          reminders: prayerNames.map((prayer) => {
+            const reminder = profile.prayer_reminders?.find(
+              (setting) => setting.prayer_name === prayer,
+            );
+            return {
+              prayer,
+              enabled: reminder?.enabled ?? true,
+              offsetMinutes: reminder?.offset_minutes ?? 0,
+            };
+          }),
+        }
+      : null,
+  };
+}
+
+function sectionTitle(section: SettingsSection) {
+  return section === "preferences"
+    ? "Preference"
+    : section === "notifications"
+      ? "Notification"
+      : "Prayer";
 }
 
 function titleCase(value: string) {

@@ -18,7 +18,7 @@ export function SettingsPage() {
       : "";
 
   return (
-    <div className="page-stack">
+    <div className="page-stack settings-page">
       <header className="page-heading">
         <div>
           <p>YOUR ACCOUNT</p>
